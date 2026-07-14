@@ -1,0 +1,11 @@
+overrides:
+  # next@16.2.10 fija postcss 8.4.31 exacto, vulnerable a GHSA-qx2v-qp2m-jg93.
+  # Quitar cuando next publique una versión con postcss >= 8.5.10.
+  postcss: ^8.5.16
+
+allowBuilds:
+  sharp: true
+  unrs-resolver: true
+ignoredBuiltDependencies:
+  - sharp
+  - unrs-resolver
