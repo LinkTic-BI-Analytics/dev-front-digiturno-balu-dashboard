@@ -6,6 +6,7 @@ import {
   buildLineOptions,
   ensureChartsRegistered,
   readChartTheme,
+  verticalAreaFill,
 } from "@/lib/charts";
 import { formatFechaCorta } from "@/lib/format";
 import { useTheme } from "@/providers/ThemeProvider";
@@ -17,7 +18,7 @@ interface TrendSparklineProps {
   metric: TrendMetric;
 }
 
-/** Sparkline compacto: línea 2px + área al 10%, sin ejes ni leyenda. */
+/** Sparkline compacto: línea 2px + área en degradado vertical, sin ejes ni leyenda. */
 export function TrendSparkline({ metric }: TrendSparklineProps) {
   const { theme } = useTheme();
 
@@ -34,7 +35,7 @@ export function TrendSparkline({ metric }: TrendSparklineProps) {
           {
             data: metric.serie.map((p) => p.valor),
             borderColor: chartTheme.serie,
-            backgroundColor: chartTheme.serieFill,
+            backgroundColor: verticalAreaFill(chartTheme.serie),
             fill: true,
             borderWidth: 2,
             tension: 0.35,

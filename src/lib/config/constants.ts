@@ -27,7 +27,7 @@ export const DRILLDOWN_PITCH = 55;
 export const DRILLDOWN_BEARING = -15;
 export const DRILLDOWN_EXTRUSION_HEIGHT = 40_000;
 
-/** Horizonte de las proyecciones (días) y ventana de entrenamiento. */
-export const FORECAST_HORIZON_DIAS = 14;
+/** Horizonte de las proyecciones y ventanas de entrenamiento — todo en DÍAS HÁBILES. */
+export const FORECAST_HORIZON_DIAS_HABILES = 14;
 export const FORECAST_VENTANA_DIAS = 56;
 export const FORECAST_HISTORIA_VISIBLE_DIAS = 30;

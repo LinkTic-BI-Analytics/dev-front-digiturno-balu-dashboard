@@ -47,6 +47,12 @@ export function DashboardHeader() {
       <div className="flex justify-center pb-2.5 md:hidden">
         <LiveIndicator />
       </div>
+
+      {/* Hairline con tinte de marca sobre el borde inferior */}
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-linear-to-r from-transparent via-brand/35 to-transparent"
+      />
     </header>
   );
 }

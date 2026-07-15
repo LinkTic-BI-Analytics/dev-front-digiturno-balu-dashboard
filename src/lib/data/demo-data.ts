@@ -1,5 +1,6 @@
 import { MESA_AYUDA_ID, SUCURSALES } from "@/lib/config/sucursales";
 import { addDays, enumerateDays, todayInBogota } from "@/lib/dates";
+import { esDiaHabil } from "@/lib/festivos";
 import type { AtencionRow } from "@/types/atenciones";
 
 /**
@@ -78,6 +79,8 @@ export function generateDemoRows(): AtencionRow[] {
 
   const rows: AtencionRow[] = [];
   for (const fecha of enumerateDays(desde, hasta)) {
+    // Como en la operación real: sin tickets en fines de semana ni festivos.
+    if (!esDiaHabil(fecha)) continue;
     generateDayRows(fecha, rows);
   }
   return rows;
@@ -85,9 +88,7 @@ export function generateDemoRows(): AtencionRow[] {
 
 function generateDayRows(fecha: string, rows: AtencionRow[]): void {
   const rand = mulberry32(hashString(`balu-demo-${fecha}`));
-  const weekday = new Date(`${fecha}T12:00:00Z`).getUTCDay();
-  const base = weekday === 0 ? 40 : weekday === 6 ? 120 : 420;
-  const totalDia = Math.round(base * (0.8 + rand() * 0.5));
+  const totalDia = Math.round(420 * (0.8 + rand() * 0.5));
   const consecutivoPorSede = new Map<string, number>();
 
   for (let i = 0; i < totalDia; i++) {

@@ -37,7 +37,7 @@ export interface ChartTheme {
   /** Color de la serie principal (token --chart-1, validado en ambos temas). */
   serie: string;
   serieFill: string;
-  /** Colores de escenarios del forecast (tokens success/danger). */
+  /** Colores de estado (dots/chips; NO se usan como series de líneas). */
   success: string;
   danger: string;
   brandStrong: string;
@@ -46,6 +46,8 @@ export interface ChartTheme {
   surface: string;
   ink: string;
   inkSoft: string;
+  /** Neutro para las líneas mín/máx del forecast (validado ≥3:1 en ambos temas). */
+  inkMute: string;
   stroke: string;
 }
 
@@ -61,6 +63,7 @@ const SSR_FALLBACK_THEME: ChartTheme = {
   surface: "#ffffff",
   ink: "#1c1917",
   inkSoft: "#57534e",
+  inkMute: "#8a8680",
   stroke: "#e8e5df",
 };
 
@@ -81,6 +84,7 @@ export function readChartTheme(): ChartTheme {
     surface: read("--surface"),
     ink: read("--ink"),
     inkSoft: read("--ink-soft"),
+    inkMute: read("--ink-mute"),
     stroke: read("--stroke"),
   };
 }
@@ -92,6 +96,30 @@ export function withAlpha(hex: string, alpha: number): string {
   const g = parseInt(value.slice(2, 4), 16);
   const b = parseInt(value.slice(4, 6), 16);
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+type AreaFillContext = { chart: Chart };
+
+/**
+ * Relleno de área con gradiente vertical (vivo arriba → transparente abajo).
+ * Solo acepta hex de 6 dígitos (como --chart-1). Scriptable de Chart.js:
+ * cachea el gradiente por altura del chartArea; si aún no existe (primer
+ * render) cae al fill plano.
+ */
+export function verticalAreaFill(hex: string) {
+  let cache: { key: string; gradient: CanvasGradient } | null = null;
+  return (context: AreaFillContext): CanvasGradient | string => {
+    const { ctx, chartArea } = context.chart;
+    if (!chartArea) return withAlpha(hex, 0.1);
+    const key = `${hex}:${chartArea.top}:${chartArea.bottom}`;
+    if (cache?.key !== key) {
+      const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+      gradient.addColorStop(0, withAlpha(hex, 0.22));
+      gradient.addColorStop(1, withAlpha(hex, 0));
+      cache = { key, gradient };
+    }
+    return cache.gradient;
+  };
 }
 
 function formatValor(valor: number, unidad: TrendMetric["unidad"]): string {

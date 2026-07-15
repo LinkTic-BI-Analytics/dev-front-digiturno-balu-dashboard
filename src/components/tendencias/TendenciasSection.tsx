@@ -8,6 +8,7 @@ import {
   TicketIcon,
   UsersIcon,
 } from "@/components/ui/icons";
+import { SectionTitle } from "@/components/ui/SectionTitle";
 import { RULES } from "@/lib/config/business-rules";
 import { useDashboard } from "@/providers/DashboardDataProvider";
 import type { TendenciasResult } from "@/types/metrics";
@@ -65,17 +66,11 @@ export function TendenciasSection() {
   return (
     <section aria-labelledby="tendencias-titulo">
       <header className="mb-4 flex flex-wrap items-end justify-between gap-2">
-        <div>
-          <h2
-            id="tendencias-titulo"
-            className="text-lg font-bold tracking-tight text-ink"
-          >
-            Tendencias
-          </h2>
-          <p className="mt-0.5 text-sm text-ink-mute">
-            Variación entre el primer y el último día del periodo filtrado
-          </p>
-        </div>
+        <SectionTitle
+          id="tendencias-titulo"
+          titulo="Tendencias"
+          subtitulo="Variación entre el primer y el último día hábil del periodo filtrado"
+        />
         {expandedId && (
           <button
             type="button"

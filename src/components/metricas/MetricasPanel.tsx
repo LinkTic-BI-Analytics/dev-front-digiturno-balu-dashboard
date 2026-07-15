@@ -7,6 +7,7 @@ import {
   UserXIcon,
   XCircleIcon,
 } from "@/components/ui/icons";
+import { SectionTitle } from "@/components/ui/SectionTitle";
 import { formatEntero, formatHoras } from "@/lib/format";
 import { useDashboard } from "@/providers/DashboardDataProvider";
 import { MetricCard } from "./MetricCard";
@@ -56,15 +57,11 @@ export function MetricasPanel() {
   return (
     <section aria-labelledby="metricas-titulo" className="flex flex-col">
       <header className="mb-4">
-        <h2
+        <SectionTitle
           id="metricas-titulo"
-          className="text-lg font-bold tracking-tight text-ink"
-        >
-          Métricas
-        </h2>
-        <p className="mt-0.5 text-sm text-ink-mute">
-          Resumen operativo del periodo
-        </p>
+          titulo="Métricas"
+          subtitulo="Resumen operativo del periodo"
+        />
       </header>
       <div
         className={`grid flex-1 grid-cols-1 gap-4 transition-opacity duration-300 sm:grid-cols-2 xl:grid-cols-1 ${

@@ -6,6 +6,7 @@ import {
   buildLineOptions,
   ensureChartsRegistered,
   readChartTheme,
+  verticalAreaFill,
   withAlpha,
 } from "@/lib/charts";
 import { formatDecimal, formatFechaCorta } from "@/lib/format";
@@ -19,8 +20,10 @@ interface ForecastChartProps {
 }
 
 /**
- * Historia reciente (línea sólida) + 3 escenarios a 14 días (punteados) con
- * banda de incertidumbre ±1σ entre optimista y pesimista.
+ * Historia reciente (línea sólida) + escenario base a 14 días hábiles
+ * (punteado) con banda mínimo–máximo. Las líneas de los límites van en neutro:
+ * el par verde/rojo falla la validación CVD como series (dataviz) y la
+ * identidad la dan la posición, la banda y la leyenda.
  */
 export function ForecastChart({ data }: ForecastChartProps) {
   const { theme } = useTheme();
@@ -57,7 +60,7 @@ export function ForecastChart({ data }: ForecastChartProps) {
             label: "Histórico",
             data: [...data.history.map((p) => p.valor), ...new Array<number | null>(fcFechas.length).fill(null)],
             borderColor: chartTheme.serie,
-            backgroundColor: chartTheme.serieFill,
+            backgroundColor: verticalAreaFill(chartTheme.serie),
             fill: true,
             borderWidth: 2,
             tension: 0.35,
@@ -68,24 +71,24 @@ export function ForecastChart({ data }: ForecastChartProps) {
             pointHoverBorderWidth: 2,
           },
           {
-            label: "Optimista (menor carga)",
-            data: proyectada((p) => p.optimista),
-            borderColor: chartTheme.success,
-            borderWidth: 1.5,
-            borderDash: [5, 5],
+            label: "Mínimo esperado",
+            data: proyectada((p) => p.minimo),
+            borderColor: chartTheme.inkMute,
+            borderWidth: 1.25,
+            borderDash: [4, 4],
             fill: false,
             tension: 0.3,
             pointRadius: 0,
             pointHoverRadius: 4,
           },
           {
-            label: "Pesimista (mayor carga)",
-            data: proyectada((p) => p.pesimista),
-            borderColor: chartTheme.danger,
+            label: "Máximo esperado",
+            data: proyectada((p) => p.maximo),
+            borderColor: chartTheme.inkMute,
             backgroundColor: withAlpha(chartTheme.serie, 0.08),
-            borderWidth: 1.5,
-            borderDash: [5, 5],
-            fill: "-1", // banda de incertidumbre hasta la línea optimista
+            borderWidth: 1.25,
+            borderDash: [4, 4],
+            fill: "-1", // banda mínimo–máximo (rango probable de demanda)
             tension: 0.3,
             pointRadius: 0,
             pointHoverRadius: 4,
@@ -139,7 +142,7 @@ export function ForecastChart({ data }: ForecastChartProps) {
       <Line
         data={chartData}
         options={options}
-        aria-label="Proyección de demanda a 14 días"
+        aria-label="Proyección de demanda a 14 días hábiles"
       />
     </div>
   );

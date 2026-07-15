@@ -9,10 +9,12 @@
    ============================================================ */
 :root {
   --canvas: #f6f5f2;
+  /* Lavado radial cálido del fondo: da profundidad sin comprometer contraste */
+  --canvas-glow: rgba(223, 119, 2, 0.05);
   --surface: #ffffff;
   --surface-2: #fbfaf7;
   --stroke: #e8e5df;
-  --stroke-strong: #d9d5cc;
+  --stroke-strong: #d5d0c5;
 
   --ink: #1c1917;
   --ink-soft: #57534e;
@@ -21,7 +23,7 @@
   --brand: #df7702;
   --brand-strong: #c05800;
   --brand-soft: #fff7ef;
-  --brand-soft-2: #ffedd8;
+  --brand-soft-2: #ffe8c8;
   --brand-contrast: #ffffff;
 
   --success: #0d8c3c;
@@ -47,11 +49,12 @@
 }
 
 .dark {
-  --canvas: #100f0d;
-  --surface: #1b1a17;
-  --surface-2: #24221d;
-  --stroke: rgba(255, 255, 255, 0.08);
-  --stroke-strong: rgba(255, 255, 255, 0.14);
+  --canvas: #121110;
+  --canvas-glow: rgba(240, 140, 31, 0.06);
+  --surface: #1e1c19;
+  --surface-2: #27231c;
+  --stroke: rgba(255, 255, 255, 0.1);
+  --stroke-strong: rgba(255, 255, 255, 0.17);
 
   --ink: #f5f4f0;
   --ink-soft: #b8b4ac;
@@ -63,10 +66,10 @@
   --brand-soft-2: #33250f;
   --brand-contrast: #100f0d;
 
-  --success: #359f5c;
+  --success: #3db368;
   --success-strong: #84c59c;
   --success-soft: #0d2a18;
-  --danger: #d56e6e;
+  --danger: #e07b7b;
   --danger-strong: #edc1c1;
   --danger-soft: #2e1414;
   --warning: #c7a074;
@@ -74,14 +77,17 @@
   --info: #6798e1;
   --info-soft: #131f31;
 
-  --chart-grid: #2c2a26;
-  --chart-axis: #57534e;
+  --chart-grid: #2e2b26;
+  --chart-axis: #78726a;
   --chart-1: #d97403;
   --chart-2: #4984db;
 
-  --elev-card: 0 1px 2px rgba(0, 0, 0, 0.3);
-  --elev-card-hover: 0 4px 16px rgba(0, 0, 0, 0.4);
-  --elev-pop: 0 24px 54px -12px rgba(0, 0, 0, 0.6);
+  /* Sombras por capas + highlight superior: recuperan la elevación en oscuro */
+  --elev-card: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 1px 2px rgba(0, 0, 0, 0.4),
+    0 12px 32px -12px rgba(0, 0, 0, 0.55);
+  --elev-card-hover: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 4px 10px rgba(0, 0, 0, 0.45),
+    0 20px 48px -12px rgba(0, 0, 0, 0.6);
+  --elev-pop: 0 24px 54px -12px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.06);
 }
 
 @theme inline {
@@ -140,7 +146,14 @@ body {
   min-height: 100%;
   display: flex;
   flex-direction: column;
-  background: var(--canvas);
+  background-color: var(--canvas);
+  /* Lavado radial cálido fijo en la esquina superior derecha */
+  background-image: radial-gradient(
+    80rem 44rem at 82% -12%,
+    var(--canvas-glow),
+    transparent 60%
+  );
+  background-attachment: fixed;
   color: var(--ink);
   font-family: var(--font-montserrat), ui-sans-serif, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -263,6 +276,18 @@ body {
   animation: gate-shimmer 1.3s ease-in-out infinite;
 }
 
+/* Hover-lift de cards estáticas. NUNCA en la card de filtros (el transform
+   crearía un stacking context que taparía el dropdown del combobox) ni en las
+   TrendCard (motion/FLIP maneja su propio transform). */
+.card-lift {
+  transition: transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease;
+}
+
+.card-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--elev-card-hover);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-live-ping,
   .animate-fade-up,
@@ -271,6 +296,11 @@ body {
   .animate-brand-wash,
   .animate-gate-shimmer {
     animation: none;
+  }
+
+  .card-lift,
+  .card-lift:hover {
+    transform: none;
   }
 }
 

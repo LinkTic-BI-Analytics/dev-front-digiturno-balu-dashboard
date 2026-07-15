@@ -4,12 +4,12 @@ import { Card } from "@/components/ui/Card";
 import { CalendarIcon, MapPinIcon, XIcon } from "@/components/ui/icons";
 import { formatDepartamento } from "@/lib/config/sucursales";
 import {
-  countDaysInclusive,
   defaultFilterRange,
   lastNDaysRange,
   previousMonthRange,
   todayInBogota,
 } from "@/lib/dates";
+import { countDiasHabiles } from "@/lib/festivos";
 import { formatEntero, formatFechaLarga } from "@/lib/format";
 import { useDashboard } from "@/providers/DashboardDataProvider";
 import type { PeriodPreset } from "@/types/filters";
@@ -69,8 +69,8 @@ export function FiltersBar() {
       ? "Mostrando todo el histórico disponible"
       : filter.desde && filter.hasta
         ? `${formatFechaLarga(filter.desde)} — ${formatFechaLarga(filter.hasta)} · ${formatEntero(
-            countDaysInclusive(filter.desde, filter.hasta),
-          )} días`
+            countDiasHabiles(filter.desde, filter.hasta),
+          )} días hábiles`
         : "";
 
   return (
@@ -117,7 +117,7 @@ export function FiltersBar() {
                       aria-pressed={activo}
                       className={`h-8 rounded-md px-3 font-button text-xs font-semibold transition-colors duration-200 ${
                         activo
-                          ? "bg-brand text-brand-contrast shadow-card"
+                          ? "bg-linear-to-b from-brand to-brand-strong text-brand-contrast shadow-card"
                           : "text-ink-soft hover:text-ink"
                       }`}
                     >

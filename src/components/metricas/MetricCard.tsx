@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/Card";
 export type MetricTone = "brand" | "success" | "danger" | "warning" | "info";
 
 const TONE_CLASSES: Record<MetricTone, string> = {
-  brand: "bg-brand-soft text-brand",
+  brand: "bg-linear-to-br from-brand-soft to-brand-soft-2 text-brand",
   success: "bg-success-soft text-success-strong",
   danger: "bg-danger-soft text-danger-strong",
   warning: "bg-warning-soft text-warning",
@@ -21,7 +21,7 @@ interface MetricCardProps {
 
 export function MetricCard({ titulo, valor, Icon, tone, detalle }: MetricCardProps) {
   return (
-    <Card className="flex h-full items-center gap-4 p-5 transition-shadow duration-200 hover:shadow-card-hover">
+    <Card className="card-lift flex h-full items-center gap-4 p-5">
       <span
         className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${TONE_CLASSES[tone]}`}
       >
