@@ -101,7 +101,12 @@ function tendenciaAsesores(tickets: Ticket[], dias: string[]): TrendMetric {
     );
   }
 
-  const acumulados = [...ticketsPorAsesor.values()];
+  let maxPorAsesor = -Infinity;
+  let minPorAsesor = Infinity;
+  for (const total of ticketsPorAsesor.values()) {
+    if (total > maxPorAsesor) maxPorAsesor = total;
+    if (total < minPorAsesor) minPorAsesor = total;
+  }
   const totalAsesores = ticketsPorAsesor.size;
   const serie = buildDailySeries(dias, promedioPorDia);
 
@@ -116,11 +121,11 @@ function tendenciaAsesores(tickets: Ticket[], dias: string[]): TrendMetric {
       { etiqueta: "Asesores distintos", valor: formatEntero(totalAsesores) },
       {
         etiqueta: "Máx. por asesor",
-        valor: acumulados.length ? formatEntero(Math.max(...acumulados)) : "—",
+        valor: totalAsesores ? formatEntero(maxPorAsesor) : "—",
       },
       {
         etiqueta: "Mín. por asesor",
-        valor: acumulados.length ? formatEntero(Math.min(...acumulados)) : "—",
+        valor: totalAsesores ? formatEntero(minPorAsesor) : "—",
       },
     ],
   };
@@ -132,17 +137,22 @@ function tendenciaAns(
   dias: string[],
   rules: BusinessRules,
 ): TrendMetric {
-  const valores: number[] = [];
+  // Una sola pasada (sin spread: con "Todo" son >100k valores y revienta la pila).
+  let suma = 0;
+  let conValor = 0;
   let cumplen = 0;
+  let mayor = -Infinity;
+  let menor = Infinity;
   for (const ticket of tickets) {
     if (ticket.tiempoEjecucion === null) continue;
-    valores.push(ticket.tiempoEjecucion);
+    suma += ticket.tiempoEjecucion;
+    conValor += 1;
     if (ticket.tiempoEjecucion <= rules.ansObjetivoMin) cumplen += 1;
+    if (ticket.tiempoEjecucion > mayor) mayor = ticket.tiempoEjecucion;
+    if (ticket.tiempoEjecucion < menor) menor = ticket.tiempoEjecucion;
   }
 
-  const promedio = valores.length
-    ? valores.reduce((a, b) => a + b, 0) / valores.length
-    : 0;
+  const promedio = conValor ? suma / conValor : 0;
   const serie = buildDailySeries(
     dias,
     avgByDay(tickets, (t) => t.tiempoEjecucion),
@@ -157,17 +167,15 @@ function tendenciaAns(
     subIndicadores: [
       {
         etiqueta: `Cumplimiento ≤ ${rules.ansObjetivoMin} min`,
-        valor: valores.length
-          ? formatPorcentaje((cumplen / valores.length) * 100)
-          : "—",
+        valor: conValor ? formatPorcentaje((cumplen / conValor) * 100) : "—",
       },
       {
         etiqueta: "Mayor tiempo de cierre",
-        valor: valores.length ? formatMinutos(Math.max(...valores)) : "—",
+        valor: conValor ? formatMinutos(mayor) : "—",
       },
       {
         etiqueta: "Menor tiempo de cierre",
-        valor: valores.length ? formatMinutos(Math.min(...valores)) : "—",
+        valor: conValor ? formatMinutos(menor) : "—",
       },
     ],
   };
