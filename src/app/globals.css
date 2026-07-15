@@ -184,7 +184,10 @@ body {
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    /* `none` (no translateY(0)): con fill-mode both, un transform retenido
+       crea stacking context permanente y los dropdowns quedan tapados por
+       las secciones posteriores del DOM. */
+    transform: none;
   }
 }
 

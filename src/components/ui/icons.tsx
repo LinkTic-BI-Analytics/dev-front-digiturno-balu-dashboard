@@ -263,3 +263,43 @@ export function RefreshIcon(props: IconProps) {
     </svg>
   );
 }
+
+export function ChevronUpIcon(props: IconProps) {
+  return (
+    <svg {...strokeDefaults} {...props}>
+      <path d="m6 15 6-6 6 6" />
+    </svg>
+  );
+}
+
+export function ChevronDownIcon(props: IconProps) {
+  return (
+    <svg {...strokeDefaults} {...props}>
+      <path d="m6 9 6 6 6-6" />
+    </svg>
+  );
+}
+
+export function ChevronLeftIcon(props: IconProps) {
+  return (
+    <svg {...strokeDefaults} {...props}>
+      <path d="m15 6-6 6 6 6" />
+    </svg>
+  );
+}
+
+export function ChevronRightIcon(props: IconProps) {
+  return (
+    <svg {...strokeDefaults} {...props}>
+      <path d="m9 6 6 6-6 6" />
+    </svg>
+  );
+}
+
+export function ArrowsUpDownIcon(props: IconProps) {
+  return (
+    <svg {...strokeDefaults} {...props}>
+      <path d="m8 9 4-4 4 4M8 15l4 4 4-4" />
+    </svg>
+  );
+}

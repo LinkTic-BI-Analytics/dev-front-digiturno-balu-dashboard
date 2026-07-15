@@ -1,12 +1,13 @@
 # CLAUDE.md — Digiturno Balú · Tablero de Operación (gerencial)
 
-Contexto para agentes que desarrollen sobre este proyecto. Última actualización: 2026-07-14.
+Contexto para agentes que desarrollen sobre este proyecto. Última actualización: 2026-07-15.
 
 ## Qué es este proyecto
 
 Dashboard **gerencial** (toma de decisiones) de la operación de **Digiturno Balú**
 (iniciativa de **Positiva**, aplicativo desarrollado por **LinkTic**): tickets, asesores,
-mapa de calor por departamentos con drill-down 3D, y proyecciones estadísticas a 14 días.
+mapa de calor por departamentos con drill-down 3D, tabla de trazabilidad de tickets y
+proyecciones estadísticas a 14 días.
 UI 100 % en español (Colombia). Desarrollado por el equipo de **BI Analytics de LinkTic**.
 
 ## Stack
@@ -48,26 +49,38 @@ dataset-store (módulo + useSyncExternalStore)
    ├─ fallo (502/red): datos intactos + "Sin conexión — reintentando" + retry al ciclo
    └─ logout: disposeDatasetCache() limpia IDB
    │
-   ▼ (servidor) /api/dataset: SELECT DISTINCT ON (ticket_id) 9 columnas →
-     packDataset() → payload COLUMNAR con diccionarios (~2,7 MB crudo → ~0,9 MB gzip
-     manual en la ruta; 136k tickets; carga fría e2e ~11 s) — cookie auth, 401 → login
+   ▼ (servidor) /api/dataset: SELECT DISTINCT ON (ticket_id) 12 columnas →
+     packDataset() → payload COLUMNAR con diccionarios (v2: ~4,6 MB crudo → ~1,4 MB gzip
+     manual en la ruta; 136k tickets) — cookie auth, 401 → login
    │
    ▼ (cliente) pipeline 100 % memoizado en DashboardDataProvider:
 tickets → filterByPeriodo → filterByAsesor → ┬ geoStats (SIN filtro depto → mapa nacional)
                                              └ filterByDepartamento → computeMetricsResult
                                                                     → computeForecast
+                                                                    → TicketsTable (drill-down)
 ```
 
 **El dedupe por ticket vive en SQL** (`DISTINCT ON`) — la vista une atenciones (N filas por
-ticket) pero solo viajan campos de nivel ticket. La vista usa **LEFT JOINs**: puede venir
-ticket con estado/asesor/sucursal null (hay 1 ticket huérfano real con sucursal inexistente:
-el codec usa el id como nombre y `geo.ts` lo ignora defensivamente).
+ticket). El `ORDER BY ticket_id, subtramite_inicio ASC NULLS LAST` hace determinista la fila
+ganadora: la **primera atención** (de ahí sale `tramite_nombre`; el resto de columnas son de
+nivel ticket). La vista usa **LEFT JOINs**: puede venir ticket con estado/asesor/sucursal
+null (hay 1 ticket huérfano real con sucursal inexistente: el codec usa el id como nombre y
+`geo.ts` lo ignora defensivamente).
+
+**Payload v2** (`DATASET_SCHEMA_VERSION = 2`): además de dia/suc/ase/est/esp/eje trae
+`tur` (turno_completo, columna plana: alta cardinalidad), `tra` + dict `tramites` (solo 8
+distintos) e `ini` (hora de inicio de atención en **minutos del día, ya convertida a
+Bogotá** — `ticket_inicio` es timestamptz UTC, verificado con muestreo de distribución
+horaria). Alimentan la tabla "Detalle de tickets", visible solo con departamento enfocado
+o asesor seleccionado (orden por columna + paginación de 10, client-side sobre copia de
+`filteredTickets` — nunca mutar el array compartido).
 
 ### Mapa de archivos clave
 
 - `src/lib/config/sucursales.ts` — ★ fuente de verdad de las 35 sedes (id = `sucursal_id`
   de la vista, direcciones estandarizadas, lat/lng) + `SEDES_POR_DEPARTAMENTO`,
   `MESA_AYUDA_ID`, alias geojson (`BOGOTA`↔`SANTAFE DE BOGOTA D.C`…), `formatDepartamento()`
+  → SIEMPRE MAYÚSCULAS con tildes ("BOGOTÁ D.C.", pedido del negocio 2026-07-15)
 - `src/lib/config/business-rules.ts` — reglas CONFIRMADAS: cerrados=`finalizado`,
   desistidos=`cancelado`, noAsistidos=`no_asistio`, abiertos=`pendiente/llamando/atendiendo`;
   `apoyoOperativoSucursalId=MESA_AYUDA_ID`; **ANS = tiempo_ejecucion, objetivo 15 min**
@@ -83,9 +96,15 @@ el codec usa el id como nombre y `geo.ts` lo ignora defensivamente).
   verde→rojo; gris sin sedes), capa de sedes (circles ∝ √tickets), popups ricos, dblclick →
   drill-down 3D (fitBounds pitch 55 + fill-extrusion + dimmed). **Todo el estado del mapa se
   re-aplica en `style.load`** (cambio de tema) desde un objeto runtime mutable fuera de React
-- `src/components/filters/` — `FiltersBar` (presets Última semana / Mes actual / Mes
-  anterior / Todo + rango + chip de departamento) y `AsesorCombobox` (búsqueda por subcadena
-  normalizando tildes)
+- `src/components/filters/` — `FiltersBar` (card full-width: grupos etiquetados
+  Periodo/Asesor, segmented control de presets, fila de resumen con días + chip de depto +
+  "Limpiar todo") y `AsesorCombobox` (búsqueda por subcadena normalizando tildes; opciones
+  **acotadas al departamento enfocado** — el provider limpia el asesor huérfano al enfocar)
+- `src/components/tickets/` — `TicketsSection` (subtítulo contextual + estado vacío),
+  `TicketsTable` (8 columnas: Turno/Fecha·hora/Sucursal/Asesor/Trámite/Estado/Espera/
+  Atención con punto ANS; sort por columna con nulls al final; reset de página con el patrón
+  "ajuste de estado durante render", sin efectos), `EstadoBadge` (tonos por bucket de
+  business-rules), `TablePagination`
 - `src/components/proyecciones/` — ForecastChart (historia + banda ±1σ + 3 punteadas),
   ScenarioCards, WeekdayDemandChart (barras), InsightsPanel
 - `src/providers/DashboardDataProvider.tsx` — pipeline de filtros/métricas (los datos viven
@@ -103,7 +122,7 @@ el codec usa el id como nombre y `geo.ts` lo ignora defensivamente).
 - Delta de tendencias: `TrendDelta` acepta `invert` (ANS: ↑rojo/↓verde).
 - Mapa: claro = estilo compartido del proyecto, oscuro = `mapbox/dark-v11`.
 
-## Decisiones de producto confirmadas (2026-07-14)
+## Decisiones de producto confirmadas (2026-07-14/15)
 
 - Card **Nivel Satisfacción eliminada** (4 cards de tendencias; expandida = ⅔ + 3 apiladas).
 - **Métricas**: cerrados · desistidos (`cancelado`) · **no asistidos** (`no_asistio`) ·
@@ -112,14 +131,22 @@ el codec usa el id como nombre y `geo.ts` lo ignora defensivamente).
 - El término "asesores activos" no se usa en la UI.
 - El CSV de sedes será eliminado: `sucursales.ts` es la fuente. Direcciones sospechosas
   anotadas en el archivo (BUENAVENTURA duplica la de CAD Bosa; SINCELEJO ambigua).
+- **Departamentos SIEMPRE en MAYÚSCULAS** en la UI (con tildes).
+- **Toda cifra lleva unidad o leyenda**: cards de tendencias con `leyenda` bajo el valor
+  (la de Asesores dice "Tickets promedio por asesor" — el valor NO es un conteo), sub-
+  indicadores con sufijo ("15 días", "355,2 tickets"), las 5 métricas con `detalle`.
+- **Tabla "Detalle de tickets"** solo en drill-down (departamento o asesor): panorama
+  general → detalle. Paginación fija de 10, orden default fecha desc.
 
 ## Riesgos / notas
 
 - Rol `readonly_bi_team` solo SELECT; grants de escritura del rol `anon` del API REST
   siguen en Supabase → recomendar al DBA revocarlos. Sin secretos en `.next/static` (verificado).
-- Payload crece ~14 KB crudo/día: el esquema versionado permite migrar (piso de fecha o
-  binario) sin romper cachés IDB.
+- Payload v2 = ~1,4 MB gzip y crece ~25 KB crudo/día: el esquema versionado permite migrar
+  (piso de fecha o binario) sin romper cachés IDB. Próxima válvula si pesa: piso de fecha.
 - Si el volumen crece 5×, mover decode+compute a un Web Worker (lib/metrics ya es puro).
+- La vista NO expone datos del ciudadano ni `created_at` del ticket (y está prohibido
+  modificarla): la tabla de detalle muestra lo que existe (turno, hora de inicio, trámite).
 
 ## Gotchas aprendidos
 
@@ -137,3 +164,16 @@ el codec usa el id como nombre y `geo.ts` lo ignora defensivamente).
 - `next start` no comprime route handlers → gzip manual con `Content-Encoding` en /api/dataset.
 - Playwright: `mouse.dblclick` no hace scroll automático — llevar el mapa al viewport antes.
 - `buildLineOptions` es `ChartOptions<"line">`: los charts de barras arman sus opciones aparte.
+- `Math.max(...array)` revienta la pila con >100k elementos (preset "Todo") → min/max en
+  una pasada (`tendencias.ts`).
+- Animación con `fill-mode: both` que termina en `transform: translateY(0)` deja un
+  **stacking context permanente** → los dropdowns quedan tapados por secciones posteriores
+  del DOM. El keyframe debe terminar en `transform: none` (+ `relative z-20` en la Section
+  de filtros como cinturón durante la animación).
+- `ticket_inicio`/`subtramite_inicio` son **timestamptz en UTC** → convertir con
+  `AT TIME ZONE 'America/Bogota'` en SQL antes de extraer hora/minuto.
+- El trámite es de nivel ATENCIÓN (joins atenciones→subtramites→tramites): con
+  `DISTINCT ON (ticket_id)` hay que ordenar por `subtramite_inicio` para elegir fila
+  determinista; ordenar por `ticket_inicio` NO sirve (es igual en todas las filas del ticket).
+- Reset de estado dependiente de props sin efectos: patrón "ajuste durante render"
+  (`if (prev !== actual) { setPrev(actual); setPage(1); }`) — pasa el lint de React estricto.

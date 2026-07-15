@@ -7,6 +7,7 @@ import { MapSection } from "@/components/map/MapSection";
 import { MetricasPanel } from "@/components/metricas/MetricasPanel";
 import { ProyeccionesSection } from "@/components/proyecciones/ProyeccionesSection";
 import { TendenciasSection } from "@/components/tendencias/TendenciasSection";
+import { TicketsSection } from "@/components/tickets/TicketsSection";
 import {
   DashboardDataProvider,
   useDashboard,
@@ -34,7 +35,7 @@ function Section({
 }
 
 function ShellContent() {
-  const { dataset } = useDashboard();
+  const { dataset, filter } = useDashboard();
 
   // Gate de carga: solo en el primer acceso (sin caché en IndexedDB).
   if (!dataset.hydrated) {
@@ -46,7 +47,9 @@ function ShellContent() {
       <DashboardHeader />
 
       <main className="mx-auto w-full max-w-[1800px] flex-1 px-4 pb-12 sm:px-6 lg:px-8">
-        <Section delayMs={80} className="mt-6">
+        {/* relative z-20: el dropdown del combobox debe pintarse sobre las
+            secciones siguientes mientras dura la animación de entrada. */}
+        <Section delayMs={80} className="relative z-20 mt-6">
           <FiltersBar />
         </Section>
 
@@ -60,6 +63,13 @@ function ShellContent() {
             <MetricasPanel />
           </div>
         </Section>
+
+        {/* Trazabilidad: aparece con el drill-down (departamento o asesor). */}
+        {(filter.departamento !== null || filter.asesorId !== null) && (
+          <Section delayMs={0} className="mt-8">
+            <TicketsSection />
+          </Section>
+        )}
 
         <Section delayMs={320} className="mt-8">
           <ProyeccionesSection />

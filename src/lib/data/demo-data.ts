@@ -36,6 +36,19 @@ const TOTAL_PESO = SUCURSALES.reduce(
   0,
 );
 
+/** Trámites reales de la operación (pesos ~ distribución observada). */
+const TRAMITES_DEMO: { nombre: string; peso: number }[] = [
+  { nombre: "AFILIACION Y NOVEDADES", peso: 51 },
+  { nombre: "PRESTACIONES ASISTENCIALES", peso: 27 },
+  { nombre: "PRESTACIONES ECONÓMICAS", peso: 11 },
+  { nombre: "CORRESPONDENCIA", peso: 6 },
+  { nombre: "ACCIDENTE DE TRABAJO O ENFERMEDAD LABORAL", peso: 2 },
+  { nombre: "ESTADOS DE CUENTA", peso: 1 },
+  { nombre: "PORTAFOLIO DE PRODUCTOS POSITIVA", peso: 1 },
+  { nombre: "SEGUROS DE VIDA", peso: 1 },
+];
+const TOTAL_PESO_TRAMITES = TRAMITES_DEMO.reduce((sum, t) => sum + t.peso, 0);
+
 const NOMBRES_ASESORES = [
   "LAURA GOMEZ RIOS",
   "CARLOS RODRIGUEZ PENA",
@@ -75,6 +88,7 @@ function generateDayRows(fecha: string, rows: AtencionRow[]): void {
   const weekday = new Date(`${fecha}T12:00:00Z`).getUTCDay();
   const base = weekday === 0 ? 40 : weekday === 6 ? 120 : 420;
   const totalDia = Math.round(base * (0.8 + rand() * 0.5));
+  const consecutivoPorSede = new Map<string, number>();
 
   for (let i = 0; i < totalDia; i++) {
     const sucursal = pickSucursal(rand);
@@ -85,9 +99,20 @@ function generateDayRows(fecha: string, rows: AtencionRow[]): void {
 
     const { estado, tiempoEspera, tiempoEjecucion } = rollAtencion(rand);
 
+    // Turno con el formato real: prefijo de sede + consecutivo del día (APA0037).
+    const consecutivo = (consecutivoPorSede.get(sucursal.id) ?? 0) + 1;
+    consecutivoPorSede.set(sucursal.id, consecutivo);
+    const prefijo = sucursal.nombre
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^A-Z]/gi, "")
+      .slice(0, 3)
+      .toUpperCase();
+
     const baseRow: AtencionRow = {
       ticket_id: `demo-${fecha}-${i}`,
       fecha_dia: fecha,
+      turno_completo: `${prefijo}${String(consecutivo).padStart(4, "0")}`,
       sucursal_id: sucursal.id,
       sucursal_nombre: sucursal.nombre,
       asesor_id: estado === "pendiente" ? null : asesorId,
@@ -96,6 +121,10 @@ function generateDayRows(fecha: string, rows: AtencionRow[]): void {
           ? null
           : NOMBRES_ASESORES[hashString(asesorId) % NOMBRES_ASESORES.length],
       ticket_estado: estado,
+      tramite_nombre: pickTramite(rand),
+      // Sin atención iniciada (pendiente) no hay hora de inicio; resto 7:00–17:00.
+      inicio_min:
+        estado === "pendiente" ? null : 420 + Math.floor(rand() * 600),
       tiempo_espera: tiempoEspera,
       tiempo_ejecucion: tiempoEjecucion,
     };
@@ -104,6 +133,15 @@ function generateDayRows(fecha: string, rows: AtencionRow[]): void {
     // ~25% con fila duplicada: ejercita el dedupe del packer como la vista real.
     if (rand() < 0.25) rows.push({ ...baseRow });
   }
+}
+
+function pickTramite(rand: () => number): string {
+  let objetivo = rand() * TOTAL_PESO_TRAMITES;
+  for (const tramite of TRAMITES_DEMO) {
+    objetivo -= tramite.peso;
+    if (objetivo <= 0) return tramite.nombre;
+  }
+  return TRAMITES_DEMO[0].nombre;
 }
 
 function rollAtencion(rand: () => number): {

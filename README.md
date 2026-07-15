@@ -12,21 +12,28 @@ Desarrollado por el equipo de **BI Analytics de LinkTic**.
 - 🔐 **Login con token maestro**: sesión HMAC httpOnly (12 h), rutas protegidas por
   `src/proxy.ts`, modal de acceso denegado y transición animada de ingreso.
 - ⚡ **Caché de dataset en el cliente**: el histórico completo (~136k tickets) viaja una vez
-  en formato columnar comprimido (~0,9 MB gzip), se refresca en background cada **3 min**
+  en formato columnar comprimido (~1,4 MB gzip), se refresca en background cada **3 min**
   (ping + doble búfer, sin parpadeos) y persiste en **IndexedDB**: tras un F5 el dashboard
   aparece en ~0,1 s. Gate de carga animado solo en el primer acceso. Los filtros son
   **instantáneos** (pipeline client-side memoizado).
 - 📊 **Tendencias (4 cards interactivas)**: Tickets, Apoyo Operativo (sucursal MESA AYUDA),
   Asesores y **ANS · Tiempo de atención** (objetivo 15 min, delta invertido: subir = rojo).
-  Expansión animada a ⅔ con gráfica detallada.
+  Expansión animada a ⅔ con gráfica detallada. Toda cifra lleva **leyenda y unidad**.
+- 📋 **Detalle de tickets (trazabilidad)**: al enfocar un departamento (doble clic en el
+  mapa) o seleccionar un asesor aparece la tabla del alcance filtrado — turno, fecha y hora
+  de inicio (hora Bogotá), sucursal, asesor, trámite, estado (badge) y tiempos de espera/
+  atención con indicador de cumplimiento ANS. **Orden por cualquier columna** y paginación
+  de 10 ("1–10 de 4.532").
 - 🗺️ **Mapa de Control gerencial**: choropleth por ANS (verde = ágil → rojo = lento),
   departamentos sin sedes en gris, leyenda con escala real, sedes como puntos (tamaño ∝
   tickets) con popups de dirección y métricas, popups de departamento con acumulados, y
   **doble clic → drill-down 3D** (cámara inclinada + extrusión) que filtra TODO el tablero;
   botón "← Volver a nacional".
-- 📅 **Filtros**: presets Última semana / Mes actual / Mes anterior / Todo, rango
-  personalizado, **combobox de asesores con búsqueda** (subcadena, ignora tildes) y chip del
-  departamento enfocado. Todo el dashboard reacciona a los tres filtros combinados.
+- 📅 **Filtros**: barra full-width con grupos etiquetados — rango personalizado, segmented
+  control de presets (Última semana / Mes actual / Mes anterior / Todo), **combobox de
+  asesores con búsqueda** (subcadena, ignora tildes; con un departamento enfocado la lista
+  se acota a sus asesores), fila de resumen del periodo y chips de filtros activos con
+  "Limpiar todo". Todo el dashboard reacciona a los tres filtros combinados.
 - 📈 **Proyecciones a 14 días**: estacionalidad semanal + regresión sobre serie
   desestacionalizada + σ de residuales → escenarios optimista/base/pesimista con banda de
   incertidumbre, demanda por día de la semana, ANS proyectado, carga por asesor y lectura
@@ -57,9 +64,10 @@ pnpm dev               # http://localhost:3000
 
 Única fuente: la vista **`gestion_turnos.vw_reporte_atenciones_v2`** ([db/context.sql](db/context.sql)),
 consultada con SQL directo (rol `readonly_bi_team`, **solo SELECT**). El servidor deduplica
-por ticket en el origen (`DISTINCT ON`) y responde `/api/dataset` en formato columnar con
-diccionarios; `/api/health` hace el ping del ciclo de refresco. La vista usa LEFT JOINs:
-los campos pueden venir null y el pipeline es defensivo.
+por ticket en el origen (`DISTINCT ON`, con orden determinista por primera atención para el
+trámite) y responde `/api/dataset` en formato columnar con diccionarios (v2 incluye turno,
+trámite y hora de inicio en hora Bogotá); `/api/health` hace el ping del ciclo de refresco.
+La vista usa LEFT JOINs: los campos pueden venir null y el pipeline es defensivo.
 
 Las 35 sedes (id, departamento, dirección estandarizada, coordenadas) viven hardcodeadas en
 [src/lib/config/sucursales.ts](src/lib/config/sucursales.ts) — fuente de verdad del match
@@ -72,7 +80,8 @@ src/
 ├── proxy.ts                    # Guard de /dashboard (Next 16)
 ├── app/                        # Login (/), /dashboard, /api/dataset, /api/health, icon.svg
 ├── components/                 # auth · dashboard (LoadingGate) · layout · filters ·
-│                               # tendencias · map (choropleth+3D) · metricas · proyecciones · ui
+│                               # tendencias · map (choropleth+3D) · metricas · tickets
+│                               # (tabla de detalle) · proyecciones · ui
 ├── providers/                  # ThemeProvider · DashboardDataProvider (pipeline de filtros)
 ├── lib/
 │   ├── auth/                   # Sesión HMAC + server actions
@@ -93,6 +102,7 @@ Contexto completo para desarrollo (decisiones, gotchas, riesgos): **[CLAUDE.md](
 - **Apoyo Operativo** = tickets de la sucursal **MESA AYUDA** (match por `sucursal_id`).
 - Estados: cerrados = `finalizado` · desistidos = `cancelado` · no asistidos = `no_asistio` ·
   abiertos = `pendiente`, `llamando`, `atendiendo`.
+- Los nombres de departamento se muestran **siempre en MAYÚSCULAS** (con tildes).
 
 ## Despliegue (Vercel)
 
