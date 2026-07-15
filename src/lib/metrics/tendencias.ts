@@ -31,10 +31,15 @@ function tendenciaTickets(tickets: Ticket[], dias: string[]): TrendMetric {
     serie,
     deltaPct: computeDeltaPct(serie),
     subIndicadores: [
-      { etiqueta: "Días del periodo", valor: formatEntero(dias.length) },
+      {
+        etiqueta: "Días del periodo",
+        valor: `${formatEntero(dias.length)} días`,
+      },
       {
         etiqueta: "Promedio por día",
-        valor: dias.length ? formatDecimal(tickets.length / dias.length) : "—",
+        valor: dias.length
+          ? `${formatDecimal(tickets.length / dias.length)} tickets`
+          : "—",
       },
     ],
   };
@@ -58,14 +63,16 @@ function tendenciaApoyoOperativo(
     deltaPct: computeDeltaPct(serie),
     subIndicadores: [
       {
-        etiqueta: "% del total",
+        etiqueta: "Participación del total",
         valor: tickets.length
           ? formatPorcentaje((apoyo.length / tickets.length) * 100)
           : "—",
       },
       {
         etiqueta: "Promedio por día",
-        valor: dias.length ? formatDecimal(apoyo.length / dias.length) : "—",
+        valor: dias.length
+          ? `${formatDecimal(apoyo.length / dias.length)} tickets`
+          : "—",
       },
       {
         etiqueta: "Tiempo prom. de atención",
@@ -121,11 +128,11 @@ function tendenciaAsesores(tickets: Ticket[], dias: string[]): TrendMetric {
       { etiqueta: "Asesores distintos", valor: formatEntero(totalAsesores) },
       {
         etiqueta: "Máx. por asesor",
-        valor: totalAsesores ? formatEntero(maxPorAsesor) : "—",
+        valor: totalAsesores ? `${formatEntero(maxPorAsesor)} tickets` : "—",
       },
       {
         etiqueta: "Mín. por asesor",
-        valor: totalAsesores ? formatEntero(minPorAsesor) : "—",
+        valor: totalAsesores ? `${formatEntero(minPorAsesor)} tickets` : "—",
       },
     ],
   };

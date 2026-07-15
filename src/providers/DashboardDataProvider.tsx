@@ -66,13 +66,30 @@ export function DashboardDataProvider({ children }: { children: ReactNode }) {
     return { preset: "mes-actual", desde, hasta, asesorId: null, departamento: null };
   });
 
-  const selectDepartamento = useCallback((departamento: string | null) => {
-    setFilter((prev) => ({ ...prev, departamento }));
-  }, []);
-
-  const asesores = useMemo(
-    () => distinctAsesores(dataset.tickets),
+  const selectDepartamento = useCallback(
+    (departamento: string | null) => {
+      setFilter((prev) => {
+        // Si el asesor activo no opera en el departamento enfocado, se limpia
+        // para no dejar un filtro huérfano (combobox sin esa opción).
+        const asesorId =
+          departamento !== null &&
+          prev.asesorId !== null &&
+          !filterByDepartamento(dataset.tickets, departamento).some(
+            (t) => t.asesorId === prev.asesorId,
+          )
+            ? null
+            : prev.asesorId;
+        return { ...prev, departamento, asesorId };
+      });
+    },
     [dataset.tickets],
+  );
+
+  // Opciones del combobox: acotadas al departamento enfocado (dataset completo,
+  // sin filtro de periodo, para que la lista sea estable al cambiar fechas).
+  const asesores = useMemo(
+    () => distinctAsesores(filterByDepartamento(dataset.tickets, filter.departamento)),
+    [dataset.tickets, filter.departamento],
   );
 
   const periodTickets = useMemo(

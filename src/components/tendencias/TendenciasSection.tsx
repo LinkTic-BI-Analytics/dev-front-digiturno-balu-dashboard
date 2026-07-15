@@ -8,6 +8,7 @@ import {
   TicketIcon,
   UsersIcon,
 } from "@/components/ui/icons";
+import { RULES } from "@/lib/config/business-rules";
 import { useDashboard } from "@/providers/DashboardDataProvider";
 import type { TendenciasResult } from "@/types/metrics";
 import { TrendCard } from "./TrendCard";
@@ -17,14 +18,35 @@ type TrendKey = keyof TendenciasResult;
 interface CardDef {
   id: TrendKey;
   titulo: string;
+  leyenda: string;
   Icon: ComponentType<SVGProps<SVGSVGElement>>;
 }
 
 const CARD_DEFS: CardDef[] = [
-  { id: "tickets", titulo: "Tickets", Icon: TicketIcon },
-  { id: "apoyoOperativo", titulo: "Apoyo Operativo", Icon: HeadsetIcon },
-  { id: "asesores", titulo: "Asesores", Icon: UsersIcon },
-  { id: "ans", titulo: "ANS · Tiempo de atención", Icon: GaugeIcon },
+  {
+    id: "tickets",
+    titulo: "Tickets",
+    leyenda: "Tickets registrados en el periodo",
+    Icon: TicketIcon,
+  },
+  {
+    id: "apoyoOperativo",
+    titulo: "Apoyo Operativo",
+    leyenda: "Tickets atendidos por la Mesa de Ayuda",
+    Icon: HeadsetIcon,
+  },
+  {
+    id: "asesores",
+    titulo: "Asesores",
+    leyenda: "Tickets promedio por asesor",
+    Icon: UsersIcon,
+  },
+  {
+    id: "ans",
+    titulo: "ANS · Tiempo de atención",
+    leyenda: `Promedio de atención · objetivo ≤ ${RULES.ansObjetivoMin} min`,
+    Icon: GaugeIcon,
+  },
 ];
 
 export function TendenciasSection() {
@@ -81,6 +103,7 @@ export function TendenciasSection() {
               <TrendCard
                 key={def.id}
                 titulo={def.titulo}
+                leyenda={def.leyenda}
                 Icon={def.Icon}
                 metric={metrics.tendencias[def.id]}
                 expanded={expanded}

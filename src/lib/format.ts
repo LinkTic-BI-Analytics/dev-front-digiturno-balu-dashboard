@@ -26,6 +26,21 @@ export function formatHoras(horas: number): string {
   return `${entero.format(Math.round(horas))} h`;
 }
 
+const hora12 = new Intl.DateTimeFormat("es-CO", {
+  hour: "numeric",
+  minute: "2-digit",
+  hour12: true,
+  timeZone: "UTC",
+});
+
+/** Minutos del día → "2:35 p. m." (es-CO, 12 horas). */
+export function formatHora(minutosDia: number): string {
+  const date = new Date(
+    Date.UTC(2000, 0, 1, Math.floor(minutosDia / 60), minutosDia % 60),
+  );
+  return hora12.format(date);
+}
+
 /** "2026-07-05" → "5 jul" (interpretando la fecha como día calendario, sin corrimiento por TZ). */
 export function formatFechaCorta(fechaIso: string): string {
   const date = new Date(`${fechaIso}T12:00:00Z`);

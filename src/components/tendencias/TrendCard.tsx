@@ -15,6 +15,7 @@ import { TrendSparkline } from "./TrendSparkline";
 
 interface TrendCardProps {
   titulo: string;
+  leyenda: string;
   Icon: ComponentType<SVGProps<SVGSVGElement>>;
   metric: TrendMetric;
   expanded: boolean;
@@ -33,6 +34,7 @@ function formatValor(metric: TrendMetric): string {
 /** Card interactiva de tendencia: clic para expandir/contraer con animación de layout (FLIP). */
 export function TrendCard({
   titulo,
+  leyenda,
   Icon,
   metric,
   expanded,
@@ -46,7 +48,7 @@ export function TrendCard({
       role="button"
       tabIndex={0}
       aria-expanded={expanded}
-      aria-label={`${titulo}: ${formatValor(metric)}. ${
+      aria-label={`${titulo}: ${formatValor(metric)} — ${leyenda}. ${
         expanded ? "Contraer" : "Expandir"
       } detalle`}
       onClick={onToggle}
@@ -82,6 +84,9 @@ export function TrendCard({
         }`}
       >
         {formatValor(metric)}
+      </p>
+      <p className={`mt-1 text-ink-mute ${expanded ? "text-sm" : "text-xs"}`}>
+        {leyenda}
       </p>
 
       <div

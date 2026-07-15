@@ -51,6 +51,23 @@ export function packDataset(rows: AtencionRow[]): DatasetPayload {
   const asesores = new Dictionary();
   const estadosIndex = new Map<string, number>();
   const estados: string[] = [];
+  const tramitesIndex = new Map<string, number>();
+  const tramites: string[] = [];
+
+  const indexOf = (
+    valor: string | null | undefined,
+    index: Map<string, number>,
+    valores: string[],
+  ): number => {
+    if (valor === null || valor === undefined) return -1;
+    let idx = index.get(valor);
+    if (idx === undefined) {
+      idx = valores.length;
+      index.set(valor, idx);
+      valores.push(valor);
+    }
+    return idx;
+  };
 
   const payload: DatasetPayload = {
     v: DATASET_SCHEMA_VERSION,
@@ -58,10 +75,14 @@ export function packDataset(rows: AtencionRow[]): DatasetPayload {
     sucursales: sucursales.entries,
     asesores: asesores.entries,
     estados,
+    tramites,
     dia: [],
     suc: [],
     ase: [],
     est: [],
+    tra: [],
+    tur: [],
+    ini: [],
     esp: [],
     eje: [],
   };
@@ -70,19 +91,10 @@ export function packDataset(rows: AtencionRow[]): DatasetPayload {
     payload.dia.push(daysBetween(payload.fechaBase, row.fecha_dia as string));
     payload.suc.push(sucursales.index(row.sucursal_id, row.sucursal_nombre));
     payload.ase.push(asesores.index(row.asesor_id, row.asesor_nombre));
-
-    if (row.ticket_estado === null || row.ticket_estado === undefined) {
-      payload.est.push(-1);
-    } else {
-      let idx = estadosIndex.get(row.ticket_estado);
-      if (idx === undefined) {
-        idx = estados.length;
-        estadosIndex.set(row.ticket_estado, idx);
-        estados.push(row.ticket_estado);
-      }
-      payload.est.push(idx);
-    }
-
+    payload.est.push(indexOf(row.ticket_estado, estadosIndex, estados));
+    payload.tra.push(indexOf(row.tramite_nombre, tramitesIndex, tramites));
+    payload.tur.push(row.turno_completo ?? null);
+    payload.ini.push(row.inicio_min ?? null);
     payload.esp.push(packMinutos(row.tiempo_espera));
     payload.eje.push(packMinutos(row.tiempo_ejecucion));
   }
@@ -113,11 +125,14 @@ export function decodeDataset(payload: DatasetPayload): Ticket[] {
 
     tickets[i] = {
       fechaDia: fechaDe(payload.dia[i]),
+      turno: payload.tur[i] ?? null,
       sucursalId: suc ? suc[0] : null,
       sucursalNombre: suc ? suc[1] : null,
       asesorId: ase ? ase[0] : null,
       asesorNombre: ase ? ase[1] : null,
       ticketEstado: payload.est[i] >= 0 ? payload.estados[payload.est[i]] : null,
+      tramite: payload.tra[i] >= 0 ? payload.tramites[payload.tra[i]] : null,
+      inicioMin: payload.ini[i] ?? null,
       tiempoEspera: esp === null ? null : esp / 100,
       tiempoEjecucion: eje === null ? null : eje / 100,
     };

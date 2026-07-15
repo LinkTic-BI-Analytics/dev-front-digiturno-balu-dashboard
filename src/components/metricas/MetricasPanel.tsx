@@ -19,6 +19,7 @@ export function MetricasPanel() {
     {
       titulo: "Tickets cerrados",
       valor: formatEntero(metricas.cerrados),
+      detalle: "Atenciones finalizadas con éxito",
       Icon: CheckCircleIcon,
       tone: "success",
     },
@@ -39,6 +40,7 @@ export function MetricasPanel() {
     {
       titulo: "Tickets abiertos",
       valor: formatEntero(metricas.abiertos),
+      detalle: "Pendientes, en llamado o en atención",
       Icon: InboxIcon,
       tone: "info",
     },

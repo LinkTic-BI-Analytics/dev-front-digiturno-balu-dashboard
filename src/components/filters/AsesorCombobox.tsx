@@ -91,7 +91,7 @@ export function AsesorCombobox({ asesores, value, onChange }: AsesorComboboxProp
   };
 
   return (
-    <div ref={rootRef} className="relative w-full sm:w-72">
+    <div ref={rootRef} className="relative w-full">
       <div className="relative">
         <UsersIcon className="pointer-events-none absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-ink-mute" />
         <input
@@ -110,7 +110,7 @@ export function AsesorCombobox({ asesores, value, onChange }: AsesorComboboxProp
           }}
           onFocus={() => setOpen(true)}
           onKeyDown={onKeyDown}
-          className={`h-9 w-full rounded-full border border-stroke bg-surface-2 pr-9 pl-9 text-sm transition-colors outline-none placeholder:font-medium focus:border-brand focus:ring-2 focus:ring-brand/15 ${
+          className={`h-9 w-full rounded-control border border-stroke bg-surface-2 pr-9 pl-9 text-sm transition-colors outline-none placeholder:font-medium focus:border-brand focus:ring-2 focus:ring-brand/15 ${
             selected ? "placeholder:text-ink" : "placeholder:text-ink-mute"
           } text-ink`}
         />
@@ -131,7 +131,7 @@ export function AsesorCombobox({ asesores, value, onChange }: AsesorComboboxProp
           id="asesor-listbox"
           ref={listRef}
           role="listbox"
-          className="absolute z-30 mt-2 max-h-72 w-full min-w-64 overflow-y-auto rounded-2xl border border-stroke bg-surface p-1.5 shadow-pop"
+          className="absolute z-30 mt-2 max-h-72 w-full min-w-64 overflow-y-auto rounded-card border border-stroke bg-surface p-1.5 shadow-pop"
         >
           {filtered.length === 0 && (
             <li className="px-3 py-2.5 text-sm text-ink-mute">

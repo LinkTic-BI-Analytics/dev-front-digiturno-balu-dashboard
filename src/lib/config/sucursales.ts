@@ -104,7 +104,11 @@ export function geojsonDesdeCanonico(departamento: string): string {
   return DEPARTAMENTO_ALIAS[departamento] ?? departamento;
 }
 
-/** Nombre para mostrar (Title Case con tildes) por clave canónica o de geojson. */
+/**
+ * Ortografía correcta (tildes) por clave canónica o de geojson. La UI muestra
+ * los departamentos SIEMPRE en MAYÚSCULAS (pedido del negocio): este mapa solo
+ * aporta las tildes que las claves canónicas no tienen.
+ */
 const DEPARTAMENTO_DISPLAY: Record<string, string> = {
   AMAZONAS: "Amazonas",
   ANTIOQUIA: "Antioquia",
@@ -142,11 +146,6 @@ const DEPARTAMENTO_DISPLAY: Record<string, string> = {
 };
 
 export function formatDepartamento(clave: string): string {
-  return DEPARTAMENTO_DISPLAY[canonicoDesdeGeojson(clave)] ?? toTitleCase(clave);
-}
-
-function toTitleCase(value: string): string {
-  return value
-    .toLowerCase()
-    .replace(/(^|\s)\p{L}/gu, (letter) => letter.toUpperCase());
+  const display = DEPARTAMENTO_DISPLAY[canonicoDesdeGeojson(clave)] ?? clave;
+  return display.toLocaleUpperCase("es-CO");
 }
