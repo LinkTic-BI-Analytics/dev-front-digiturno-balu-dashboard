@@ -17,18 +17,30 @@ function resolveConfig(snapshot: {
   if (snapshot.degraded) {
     return {
       etiqueta: "Sin conexión — reintentando",
-      dotClass: "bg-danger",
+      dotClass: "bg-danger shadow-[0_0_8px_1px] shadow-danger/50",
       ping: false,
     };
   }
   if (snapshot.refreshing) {
-    return { etiqueta: "Actualizando datos…", dotClass: "bg-brand", ping: true };
+    return {
+      etiqueta: "Actualizando datos…",
+      dotClass: "bg-brand shadow-[0_0_8px_1px] shadow-brand/50",
+      ping: true,
+    };
   }
   if (snapshot.source === "postgres") {
-    return { etiqueta: "Datos en vivo", dotClass: "bg-success", ping: true };
+    return {
+      etiqueta: "Datos en vivo",
+      dotClass: "bg-success shadow-[0_0_8px_1px] shadow-success/50",
+      ping: true,
+    };
   }
   if (snapshot.source === "demo") {
-    return { etiqueta: "Datos demo", dotClass: "bg-brand", ping: true };
+    return {
+      etiqueta: "Datos demo",
+      dotClass: "bg-brand shadow-[0_0_8px_1px] shadow-brand/50",
+      ping: true,
+    };
   }
   if (snapshot.source === "sin-configurar") {
     return {

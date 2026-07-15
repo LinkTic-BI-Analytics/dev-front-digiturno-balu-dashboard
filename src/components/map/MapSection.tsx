@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { MapPinIcon } from "@/components/ui/icons";
+import { SectionTitle } from "@/components/ui/SectionTitle";
 import { formatDepartamento } from "@/lib/config/sucursales";
 import { useDashboard } from "@/providers/DashboardDataProvider";
 import { MapLegend } from "./MapLegend";
@@ -28,14 +29,15 @@ export function MapSection() {
   return (
     <section aria-labelledby="mapa-titulo" className="flex flex-col">
       <header className="mb-4">
-        <h2 id="mapa-titulo" className="text-lg font-bold tracking-tight text-ink">
-          Mapa de Control
-        </h2>
-        <p className="mt-0.5 text-sm text-ink-mute">
-          {filter.departamento
-            ? `Enfocado en ${formatDepartamento(filter.departamento)} — todo el tablero está filtrado por este departamento`
-            : "Mapa de calor por ANS (tiempo de atención) · doble clic en un departamento para enfocarlo"}
-        </p>
+        <SectionTitle
+          id="mapa-titulo"
+          titulo="Mapa de Control"
+          subtitulo={
+            filter.departamento
+              ? `Enfocado en ${formatDepartamento(filter.departamento)} — todo el tablero está filtrado por este departamento`
+              : "Mapa de calor por ANS (tiempo de atención) · doble clic en un departamento para enfocarlo"
+          }
+        />
       </header>
 
       <div className="relative min-h-[420px] flex-1 xl:min-h-[560px]">

@@ -1,32 +1,39 @@
 import type { BusinessRules } from "@/lib/config/business-rules";
 import {
   FORECAST_HISTORIA_VISIBLE_DIAS,
-  FORECAST_HORIZON_DIAS,
+  FORECAST_HORIZON_DIAS_HABILES,
   FORECAST_VENTANA_DIAS,
 } from "@/lib/config/constants";
-import { addDays, enumerateDays, weekdayOf } from "@/lib/dates";
+import { weekdayOf } from "@/lib/dates";
+import {
+  addDiasHabiles,
+  enumerateDiasHabiles,
+  lastNDiasHabiles,
+} from "@/lib/festivos";
 import { formatDecimal, formatEntero, formatMinutos } from "@/lib/format";
 import type { Ticket } from "@/types/atenciones";
 import type { DailyPoint } from "@/types/metrics";
 import { avgByDay, buildDailySeries, countByDay } from "./series";
 
 /**
- * Proyecciones gerenciales sobre el conjunto filtrado:
+ * Proyecciones gerenciales sobre el conjunto filtrado. TODO el eje temporal es
+ * de DÍAS HÁBILES (la operación no gestiona sábados, domingos ni festivos —
+ * los pocos tickets que caen ahí quedan fuera de estas series, ver festivos.ts):
  *
- * 1. Serie diaria de tickets (huecos = 0) en una ventana de entrenamiento de
- *    hasta 56 días.
- * 2. Estacionalidad por día de semana: s_w = media_w / mediaGlobal
- *    (renormalizada a media 1, clamp ≥ 0.05).
+ * 1. Serie por día hábil de tickets (huecos = 0) en una ventana de
+ *    entrenamiento de hasta 56 días hábiles.
+ * 2. Estacionalidad Lun–Vie: s_w = media_w / mediaGlobal (renormalizada a
+ *    media 1, clamp ≥ 0.05).
  * 3. Tendencia por mínimos cuadrados sobre la serie desestacionalizada.
- * 4. Pronóstico a 14 días: ŷ_t = max(0, (a + b·t) · s_w).
- * 5. Incertidumbre: σ de los residuales → escenarios con encuadre de
- *    capacidad: pesimista = +1σ (mayor carga), optimista = −1σ (menor carga).
+ * 4. Pronóstico a 14 días hábiles: ŷ_t = max(0, (a + b·t) · s_w).
+ * 5. Incertidumbre: σ de los residuales → escenarios mínimo (base − σ),
+ *    base y máximo (base + σ).
  */
 
 const MIN_TICKETS = 20;
-const MIN_DIAS_HISTORIA = 14;
-const VENTANA_ANS_DIAS = 28;
-const VENTANA_CARGA_DIAS = 14;
+const MIN_DIAS_HABILES_HISTORIA = 10;
+const VENTANA_ANS_DIAS_HABILES = 20;
+const VENTANA_CARGA_DIAS_HABILES = 10;
 const MIN_PUNTOS_ANS = 7;
 
 const NOMBRES_DIA = [
@@ -38,25 +45,27 @@ const NOMBRES_DIA = [
   "Viernes",
   "Sábado",
 ];
-/** Orden de exhibición Lunes → Domingo (índices de getUTCDay). */
-const ORDEN_SEMANA = [1, 2, 3, 4, 5, 6, 0];
+/** Orden de exhibición Lunes → Viernes (índices de getUTCDay; no hay operación en finde). */
+const ORDEN_SEMANA = [1, 2, 3, 4, 5];
 
 export interface ForecastPoint {
   fecha: string;
   base: number;
-  optimista: number;
-  pesimista: number;
+  minimo: number;
+  maximo: number;
 }
 
 export interface ForecastData {
   insuficiente: false;
-  /** Últimos 30 días reales de la serie. */
+  /** Últimos 30 días hábiles reales de la serie. */
   history: DailyPoint[];
   forecast: ForecastPoint[];
-  totales: { base: number; optimista: number; pesimista: number };
+  totales: { base: number; minimo: number; maximo: number };
   demandaPorDiaSemana: { dia: string; promedio: number; esPico: boolean }[];
   /** Pendiente de la tendencia en % por semana relativo al nivel medio. */
   tendenciaSemanalPct: number;
+  /** Tickets promedio por día hábil (últimos 10 días hábiles) — el "hoy" comparativo. */
+  demandaActualDia: number | null;
   ansActualMin: number | null;
   ansProyectadoMin: number | null;
   asesoresActivos: number;
@@ -88,11 +97,11 @@ export function computeForecast(
     if (fechaDia > maxFecha) maxFecha = fechaDia;
   }
 
-  const diasTotales = enumerateDays(minFecha, maxFecha);
-  if (diasTotales.length < MIN_DIAS_HISTORIA) {
+  const diasTotales = enumerateDiasHabiles(minFecha, maxFecha);
+  if (diasTotales.length < MIN_DIAS_HABILES_HISTORIA) {
     return {
       insuficiente: true,
-      motivo: `Se requieren al menos ${MIN_DIAS_HISTORIA} días de historia para proyectar (hay ${diasTotales.length}).`,
+      motivo: `Se requieren al menos ${MIN_DIAS_HABILES_HISTORIA} días hábiles de historia para proyectar (hay ${diasTotales.length}).`,
     };
   }
 
@@ -108,7 +117,7 @@ export function computeForecast(
     };
   }
 
-  // ── Estacionalidad semanal ──────────────────────────────────────────────
+  // ── Estacionalidad Lun–Vie (el eje solo contiene días hábiles) ──────────
   const porDiaSemana = new Map<number, number[]>();
   training.forEach((p) => {
     const w = weekdayOf(p.fecha);
@@ -121,8 +130,8 @@ export function computeForecast(
   for (const [w, valores] of porDiaSemana) {
     seasonality[w] = mean(valores) / mediaGlobal;
   }
-  const mediaS = mean(seasonality);
-  for (let w = 0; w < 7; w++) {
+  const mediaS = mean(ORDEN_SEMANA.map((w) => seasonality[w]));
+  for (const w of ORDEN_SEMANA) {
     seasonality[w] = Math.max(seasonality[w] / mediaS, 0.05);
   }
 
@@ -138,24 +147,24 @@ export function computeForecast(
   );
   const sigma = stdDev(residuales);
 
-  // ── Pronóstico ──────────────────────────────────────────────────────────
+  // ── Pronóstico (próximos 14 días hábiles) ───────────────────────────────
   const forecast: ForecastPoint[] = [];
-  for (let h = 1; h <= FORECAST_HORIZON_DIAS; h++) {
-    const fecha = addDays(maxFecha, h);
-    const t = n - 1 + h;
+  for (let h = 1; h <= FORECAST_HORIZON_DIAS_HABILES; h++) {
+    const fecha = addDiasHabiles(maxFecha, h);
+    const t = n - 1 + h; // t sigue siendo índice de día hábil, punta a punta
     const base = Math.max(0, (a + b * t) * seasonality[weekdayOf(fecha)]);
     forecast.push({
       fecha,
       base: round1(base),
-      optimista: round1(Math.max(0, base - sigma)),
-      pesimista: round1(base + sigma),
+      minimo: round1(Math.max(0, base - sigma)),
+      maximo: round1(base + sigma),
     });
   }
 
   const totales = {
     base: Math.round(forecast.reduce((s, p) => s + p.base, 0)),
-    optimista: Math.round(forecast.reduce((s, p) => s + p.optimista, 0)),
-    pesimista: Math.round(forecast.reduce((s, p) => s + p.pesimista, 0)),
+    minimo: Math.round(forecast.reduce((s, p) => s + p.minimo, 0)),
+    maximo: Math.round(forecast.reduce((s, p) => s + p.maximo, 0)),
   };
 
   const tendenciaSemanalPct = ((b * 7) / mediaGlobal) * 100;
@@ -184,14 +193,15 @@ export function computeForecast(
         }
       : null;
 
-  // ── ANS proyectado (regresión sobre el promedio diario de atención) ─────
-  const desdeAns = addDays(maxFecha, -(VENTANA_ANS_DIAS - 1));
+  // ── ANS proyectado (regresión sobre el promedio por día hábil) ──────────
+  const ventanaAns = lastNDiasHabiles(maxFecha, VENTANA_ANS_DIAS_HABILES);
+  const indiceAns = new Map(ventanaAns.map((fecha, i) => [fecha, i]));
   const ansPorDia = avgByDay(
-    tickets.filter((t) => t.fechaDia >= desdeAns),
+    tickets.filter((t) => indiceAns.has(t.fechaDia)),
     (t) => t.tiempoEjecucion,
   );
   const puntosAns = [...ansPorDia.entries()]
-    .map(([fecha, valor]) => ({ t: enumerateIndex(desdeAns, fecha), valor }))
+    .map(([fecha, valor]) => ({ t: indiceAns.get(fecha) as number, valor }))
     .sort((p, q) => p.t - q.t);
 
   let ansActualMin: number | null = null;
@@ -204,26 +214,36 @@ export function computeForecast(
         puntosAns.map((p) => p.valor),
       );
       ansProyectadoMin = round1(
-        Math.max(0, reg.a + reg.b * (VENTANA_ANS_DIAS - 1 + FORECAST_HORIZON_DIAS)),
+        Math.max(
+          0,
+          reg.a +
+            reg.b *
+              (VENTANA_ANS_DIAS_HABILES - 1 + FORECAST_HORIZON_DIAS_HABILES),
+        ),
       );
     }
   }
 
-  // ── Carga por asesor ────────────────────────────────────────────────────
-  const desdeCarga = addDays(maxFecha, -(VENTANA_CARGA_DIAS - 1));
+  // ── Demanda y carga actuales (últimos 10 días hábiles) ──────────────────
+  const ventanaCarga = new Set(
+    lastNDiasHabiles(maxFecha, VENTANA_CARGA_DIAS_HABILES),
+  );
   const asesoresRecientes = new Set<string>();
   let ticketsRecientes = 0;
   for (const ticket of tickets) {
-    if (ticket.fechaDia < desdeCarga) continue;
+    if (!ventanaCarga.has(ticket.fechaDia)) continue;
     ticketsRecientes += 1;
     if (ticket.asesorId) asesoresRecientes.add(ticket.asesorId);
   }
   const asesoresActivos = asesoresRecientes.size;
+  const demandaActualDia = round1(
+    ticketsRecientes / VENTANA_CARGA_DIAS_HABILES,
+  );
   const cargaActualDia = asesoresActivos
-    ? round1(ticketsRecientes / VENTANA_CARGA_DIAS / asesoresActivos)
+    ? round1(ticketsRecientes / VENTANA_CARGA_DIAS_HABILES / asesoresActivos)
     : null;
   const cargaProyectadaDia = asesoresActivos
-    ? round1(totales.base / FORECAST_HORIZON_DIAS / asesoresActivos)
+    ? round1(totales.base / FORECAST_HORIZON_DIAS_HABILES / asesoresActivos)
     : null;
 
   const data: ForecastData = {
@@ -233,6 +253,7 @@ export function computeForecast(
     totales,
     demandaPorDiaSemana,
     tendenciaSemanalPct,
+    demandaActualDia,
     ansActualMin,
     ansProyectadoMin,
     asesoresActivos,
@@ -258,7 +279,7 @@ function buildInsights(data: ForecastData, rules: BusinessRules): string[] {
         ? `crece ~${formatDecimal(tendenciaSemanalPct)}% por semana`
         : `decrece ~${formatDecimal(Math.abs(tendenciaSemanalPct))}% por semana`;
   frases.push(
-    `La demanda ${direccion}: se proyectan ~${formatEntero(totales.base)} tickets en los próximos 14 días (entre ${formatEntero(totales.optimista)} y ${formatEntero(totales.pesimista)}).`,
+    `La demanda ${direccion}: se proyectan ~${formatEntero(totales.base)} tickets en los próximos 14 días hábiles (entre un mínimo de ${formatEntero(totales.minimo)} y un máximo de ${formatEntero(totales.maximo)}).`,
   );
 
   if (data.diaPico && data.diaPico.pctSobrePromedio >= 5) {
@@ -274,7 +295,7 @@ function buildInsights(data: ForecastData, rules: BusinessRules): string[] {
         ? `dentro del objetivo de ${objetivo} min`
         : `por encima del objetivo de ${objetivo} min`;
     frases.push(
-      `El tiempo de atención proyectado a 14 días es ${formatMinutos(data.ansProyectadoMin)} (hoy ${formatMinutos(data.ansActualMin)}), ${estadoObjetivo}.`,
+      `El tiempo de atención proyectado a 14 días hábiles es ${formatMinutos(data.ansProyectadoMin)} (hoy ${formatMinutos(data.ansActualMin)}), ${estadoObjetivo}.`,
     );
   }
 
@@ -287,7 +308,7 @@ function buildInsights(data: ForecastData, rules: BusinessRules): string[] {
           ? "mayor presión sobre la dotación actual"
           : "holgura frente a la dotación actual";
     frases.push(
-      `Con la dotación actual de ${formatEntero(data.asesoresActivos)} asesores, cada uno atendería ~${formatDecimal(data.cargaProyectadaDia)} tickets/día (hoy ~${formatDecimal(data.cargaActualDia)}): ${matiz}.`,
+      `Con los ${formatEntero(data.asesoresActivos)} asesores actuales, cada uno atendería ~${formatDecimal(data.cargaProyectadaDia)} tickets por día hábil (hoy ~${formatDecimal(data.cargaActualDia)}): ${matiz}.`,
     );
   }
 
@@ -331,14 +352,6 @@ function leastSquaresXY(xs: number[], ys: number[]): { a: number; b: number } {
   }
   const b = den === 0 ? 0 : num / den;
   return { a: my - b * mx, b };
-}
-
-function enumerateIndex(desde: string, fecha: string): number {
-  // días de distancia (fechas ISO comparables): reutiliza la aritmética de dates.ts
-  return Math.round(
-    (Date.parse(`${fecha}T00:00:00Z`) - Date.parse(`${desde}T00:00:00Z`)) /
-      86_400_000,
-  );
 }
 
 function round1(value: number): number {

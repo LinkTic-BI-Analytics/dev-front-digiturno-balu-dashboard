@@ -6,7 +6,7 @@ import {
   buildLineOptions,
   ensureChartsRegistered,
   readChartTheme,
-  withAlpha,
+  verticalAreaFill,
 } from "@/lib/charts";
 import { formatFechaCorta } from "@/lib/format";
 import { useTheme } from "@/providers/ThemeProvider";
@@ -36,7 +36,7 @@ export function TrendDetailChart({ metric }: TrendDetailChartProps) {
           {
             data: metric.serie.map((p) => p.valor),
             borderColor: chartTheme.serie,
-            backgroundColor: withAlpha(chartTheme.serie, 0.1),
+            backgroundColor: verticalAreaFill(chartTheme.serie),
             fill: true,
             borderWidth: 2,
             tension: 0.35,

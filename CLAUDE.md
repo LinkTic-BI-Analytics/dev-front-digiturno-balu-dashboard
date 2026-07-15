@@ -84,12 +84,22 @@ o asesor seleccionado (orden por columna + paginación de 10, client-side sobre 
 - `src/lib/config/business-rules.ts` — reglas CONFIRMADAS: cerrados=`finalizado`,
   desistidos=`cancelado`, noAsistidos=`no_asistio`, abiertos=`pendiente/llamando/atendiendo`;
   `apoyoOperativoSucursalId=MESA_AYUDA_ID`; **ANS = tiempo_ejecucion, objetivo 15 min**
+- `src/lib/festivos.ts` — ★ calendario laboral colombiano CALCULADO (computus de Pascua +
+  Ley Emiliani + fijos; 18 festivos/año, cache por año, verificado 2025/2026). **Todos los
+  ejes de días del tablero son DÍAS HÁBILES** (`esDiaHabil`, `enumerateDiasHabiles`,
+  `addDiasHabiles`, `lastNDiasHabiles`, `countDiasHabiles`): la operación no gestiona
+  Sáb/Dom/festivos (verificado en datos: 0,05 %). Los tickets de días no hábiles SIGUEN
+  contando en totales/buckets/horas/tabla; solo salen de series, promedios y forecast.
 - `src/lib/data/` — `dataset-codec.ts` (pack/decode columnar, `DATASET_SCHEMA_VERSION`
   invalida cachés IDB), `fetch-dataset.ts` (SQL + ping), `dataset-store.ts` (ciclo 3 min),
   `idb.ts` (IndexedDB tolerante a fallos), `demo-data.ts`
-- `src/lib/metrics/` — `filter` / `series` / `tendencias` / `metricas` / `compute` / `geo`
-  (agregación por departamento/sede) / `forecast` (estacionalidad semanal + regresión + σ →
-  3 escenarios, insights narrativos; degrada con <14 días o <20 tickets) — todo puro
+- `src/lib/metrics/` — `filter` / `series` / `tendencias` / `metricas` / `compute` (eje =
+  días hábiles vía `resolveDias`) / `geo` (agregación por departamento/sede) / `forecast`
+  (TODO en días hábiles: estacionalidad Lun–Vie + regresión + σ → escenarios
+  **mínimo/base/máximo** a 14 días hábiles con `addDiasHabiles`, `demandaActualDia` para
+  la comparativa hoy→proyección, insights narrativos; degrada con <10 días hábiles o
+  <20 tickets) — todo puro. En la UI los escenarios se llaman Mínimo/Base/Máximo esperado,
+  SIN jerga σ.
 - `src/lib/map/departamentos-geo.ts` — geojson con `feature.id` explícito por índice
   (feature-state determinista) + bbox por depto
 - `src/components/map/ControlMap.tsx` — choropleth por feature-state (`ansNorm` 0..1,
@@ -105,8 +115,11 @@ o asesor seleccionado (orden por columna + paginación de 10, client-side sobre 
   Atención con punto ANS; sort por columna con nulls al final; reset de página con el patrón
   "ajuste de estado durante render", sin efectos), `EstadoBadge` (tonos por bucket de
   business-rules), `TablePagination`
-- `src/components/proyecciones/` — ForecastChart (historia + banda ±1σ + 3 punteadas),
-  ScenarioCards, WeekdayDemandChart (barras), InsightsPanel
+- `src/components/proyecciones/` — ForecastChart (historia con gradiente + base punteada +
+  banda mín–máx; las líneas de límites van en NEUTRO `--ink-mute`: el trío verde/rojo/naranja
+  FALLA la validación CVD del skill dataviz — la identidad la dan posición, banda y leyenda),
+  ScenarioCards (Mínimo/Base/Máximo + "±X% vs hoy"), WeekdayDemandChart (5 barras Lun–Vie),
+  InsightsPanel (tiles comparativos "Hoy → En 14 días hábiles" con TrendDelta + narrativa)
 - `src/providers/DashboardDataProvider.tsx` — pipeline de filtros/métricas (los datos viven
   en dataset-store); `ThemeProvider` — tema vía `useSyncExternalStore` sobre `.dark`
 - Favicon: `src/app/icon.svg` (emblema Positiva). **No hay footer.**
@@ -116,7 +129,16 @@ o asesor seleccionado (orden por columna + paginación de 10, client-side sobre 
 - Capa semántica derivada de los tokens Balú (modernizados) en `globals.css`:
   `--canvas/--surface*/--stroke*/--ink*/--brand*/--success*/--danger*/--warning*/--info*/--chart-*`
   para `:root` y `.dark`. Fuentes Montserrat + Poppins (`font-button`).
-- Series de charts: `--chart-1`/`--chart-2` **validadas** con el skill dataviz en ambos temas.
+- **Refresh 2026-07-15 ("temas vivos")**: `--canvas-glow` (lavado radial cálido en el body,
+  `background-attachment: fixed`), dark con superficies más cálidas (#1e1c19/#27231c),
+  strokes más definidos, success/danger más vivos y **sombras por capas + highlight inset**
+  (recuperan elevación); `.card-lift` (hover translateY(−2px), respeta reduced-motion —
+  NUNCA en la card de filtros ni en TrendCard), `verticalAreaFill()` en charts (gradiente
+  0.22→0), `SectionTitle` (barra de acento brand), glow del LiveIndicator, segmented activo
+  y chips brand con gradiente, hairline brand bajo el header.
+- Series de charts: `--chart-1`/`--chart-2` **validadas** con el skill dataviz en ambos temas
+  (re-validadas contra la surface oscura nueva; `--chart-axis` dark ≥3,5:1). Las líneas
+  mín/máx del forecast usan `--ink-mute` (ver proyecciones).
   Escala del mapa de calor (`ANS_HEAT_STOPS` en ControlMap): verde=ágil → rojo=lento,
   colores fijos entre temas (pedido explícito del negocio; el ANS en minutos: subir = peor).
 - Delta de tendencias: `TrendDelta` acepta `invert` (ANS: ↑rojo/↓verde).
@@ -127,7 +149,8 @@ o asesor seleccionado (orden por columna + paginación de 10, client-side sobre 
 - Card **Nivel Satisfacción eliminada** (4 cards de tendencias; expandida = ⅔ + 3 apiladas).
 - **Métricas**: cerrados · desistidos (`cancelado`) · **no asistidos** (`no_asistio`) ·
   abiertos · horas totales (sin card de tiempo promedio: vive en ANS).
-- **Proyecciones**: escenarios con encuadre de capacidad (pesimista = +1σ = mayor carga).
+- **Proyecciones**: escenarios renombrados a Mínimo/Base/Máximo (2026-07-15; internamente
+  mínimo = base−σ, máximo = base+σ — la σ no se muestra en la UI).
 - El término "asesores activos" no se usa en la UI.
 - El CSV de sedes será eliminado: `sucursales.ts` es la fuente. Direcciones sospechosas
   anotadas en el archivo (BUENAVENTURA duplica la de CAD Bosa; SINCELEJO ambigua).
@@ -137,6 +160,13 @@ o asesor seleccionado (orden por columna + paginación de 10, client-side sobre 
   indicadores con sufijo ("15 días", "355,2 tickets"), las 5 métricas con `detalle`.
 - **Tabla "Detalle de tickets"** solo en drill-down (departamento o asesor): panorama
   general → detalle. Paginación fija de 10, orden default fecha desc.
+- **Días hábiles (2026-07-15)**: Sáb/Dom/festivos colombianos fuera de TODOS los ejes de
+  días (series, "Promedio por día hábil", deltas, forecast). El salto de cifras vs antes
+  (+~40 % en promedios) es esperado: el denominador ya no incluye días en cero.
+- **Escenarios del forecast**: Mínimo / Base / Máximo esperado (sin σ en la UI); la lectura
+  gerencial compara explícitamente Hoy → En 14 días hábiles ("Demanda diaria", "Tiempo de
+  atención (ANS)", "Tickets por asesor al día" — antes "Carga proyectada por asesor" — y
+  "Día pico de demanda").
 
 ## Riesgos / notas
 
@@ -177,3 +207,11 @@ o asesor seleccionado (orden por columna + paginación de 10, client-side sobre 
   determinista; ordenar por `ticket_inicio` NO sirve (es igual en todas las filas del ticket).
 - Reset de estado dependiente de props sin efectos: patrón "ajuste durante render"
   (`if (prev !== actual) { setPrev(actual); setPage(1); }`) — pasa el lint de React estricto.
+- El pooler de Supabase tiene días lentos: la misma query pasó de ~7 s a ~100 s (con 502
+  por `statement timeout`, código PG 57014) en horas pico. El ciclo degrada con gracia
+  (datos intactos + retry); para e2e usar DEMO_MODE si la BD está lenta.
+- Scriptable `backgroundColor` de chart.js: `chartArea` es `undefined` en el primer render
+  → fallback al fill plano y cachear el gradiente por dimensiones (`verticalAreaFill`).
+- El trío verde/naranja/rojo como SERIES de un chart falla la validación dataviz (CVD en
+  claro, piso normal-vision en oscuro; no existe combinación legal rojo/naranja en dark) →
+  límites del forecast en `--ink-mute` neutro.

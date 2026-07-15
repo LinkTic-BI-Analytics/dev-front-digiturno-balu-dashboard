@@ -34,10 +34,15 @@ Desarrollado por el equipo de **BI Analytics de LinkTic**.
   asesores con búsqueda** (subcadena, ignora tildes; con un departamento enfocado la lista
   se acota a sus asesores), fila de resumen del periodo y chips de filtros activos con
   "Limpiar todo". Todo el dashboard reacciona a los tres filtros combinados.
-- 📈 **Proyecciones a 14 días**: estacionalidad semanal + regresión sobre serie
-  desestacionalizada + σ de residuales → escenarios optimista/base/pesimista con banda de
-  incertidumbre, demanda por día de la semana, ANS proyectado, carga por asesor y lectura
-  gerencial narrativa. Degrada con historia insuficiente.
+- 📈 **Proyecciones a 14 días hábiles**: estacionalidad de lunes a viernes + regresión
+  sobre serie desestacionalizada + incertidumbre de residuales → escenarios
+  **Mínimo / Base / Máximo esperado** con banda de rango probable, demanda por día de la
+  semana (Lun–Vie), y una **lectura gerencial comparativa "Hoy → En 14 días hábiles"**
+  (demanda diaria, ANS, tickets por asesor al día, día pico) + narrativa. Degrada con
+  historia insuficiente.
+- 📆 **Días hábiles de Colombia**: los sábados, domingos y festivos (calculados: Ley
+  Emiliani + Semana Santa, sin dependencias) se excluyen de todas las series, promedios
+  y proyecciones — la operación no gestiona esos días. Los totales del periodo no cambian.
 - 📉 **Métricas**: cerrados, desistidos (`cancelado`), **no asistidos** (`no_asistio`),
   abiertos y horas totales en atención.
 - 🌗 Tema claro/oscuro (el mapa alterna de estilo conservando choropleth y selección),
@@ -86,6 +91,7 @@ src/
 ├── lib/
 │   ├── auth/                   # Sesión HMAC + server actions
 │   ├── config/                 # business-rules (confirmadas) · sucursales (35 sedes) · constants
+│   ├── festivos.ts             # Calendario laboral colombiano calculado (días hábiles)
 │   ├── data/                   # fetch-dataset (SQL) · dataset-codec (columnar) ·
 │   │                           # dataset-store (ciclo 3 min + doble búfer) · idb · demo-data
 │   ├── map/                    # Loader del geojson (ids deterministas + bbox)
@@ -103,6 +109,8 @@ Contexto completo para desarrollo (decisiones, gotchas, riesgos): **[CLAUDE.md](
 - Estados: cerrados = `finalizado` · desistidos = `cancelado` · no asistidos = `no_asistio` ·
   abiertos = `pendiente`, `llamando`, `atendiendo`.
 - Los nombres de departamento se muestran **siempre en MAYÚSCULAS** (con tildes).
+- **Todos los ejes de días son días hábiles** (sin sábados, domingos ni festivos
+  colombianos); los tickets de días no hábiles siguen contando en los totales.
 
 ## Despliegue (Vercel)
 

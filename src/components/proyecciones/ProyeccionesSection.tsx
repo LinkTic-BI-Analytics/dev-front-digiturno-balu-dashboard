@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { Card } from "@/components/ui/Card";
 import { GaugeIcon } from "@/components/ui/icons";
+import { SectionTitle } from "@/components/ui/SectionTitle";
 import { RULES } from "@/lib/config/business-rules";
 import { computeForecast } from "@/lib/metrics/forecast";
 import { useDashboard } from "@/providers/DashboardDataProvider";
@@ -23,16 +24,11 @@ export function ProyeccionesSection() {
   return (
     <section aria-labelledby="proyecciones-titulo">
       <header className="mb-4">
-        <h2
+        <SectionTitle
           id="proyecciones-titulo"
-          className="text-lg font-bold tracking-tight text-ink"
-        >
-          Proyecciones
-        </h2>
-        <p className="mt-0.5 text-sm text-ink-mute">
-          Escenarios a 14 días según la tendencia y la estacionalidad semanal
-          del panorama filtrado
-        </p>
+          titulo="Proyecciones"
+          subtitulo="Escenarios a 14 días hábiles según la tendencia y la estacionalidad de lunes a viernes del panorama filtrado"
+        />
       </header>
 
       {forecast.insuficiente ? (
@@ -51,9 +47,9 @@ export function ProyeccionesSection() {
             dataset.refreshing ? "opacity-75" : "opacity-100"
           }`}
         >
-          <Card className="p-5 xl:col-span-2">
+          <Card className="card-lift p-5 xl:col-span-2">
             <h3 className="text-xs font-bold tracking-wide text-ink-soft uppercase">
-              Demanda proyectada · próximos 14 días
+              Demanda proyectada · próximos 14 días hábiles
             </h3>
             <div className="mt-4">
               <ForecastChart data={forecast} />
@@ -62,7 +58,7 @@ export function ProyeccionesSection() {
 
           <ScenarioCards data={forecast} />
 
-          <Card className="p-5">
+          <Card className="card-lift p-5">
             <h3 className="text-xs font-bold tracking-wide text-ink-soft uppercase">
               Demanda por día de la semana
             </h3>
@@ -71,7 +67,7 @@ export function ProyeccionesSection() {
             </div>
           </Card>
 
-          <Card className="p-5 xl:col-span-2">
+          <Card className="card-lift p-5 xl:col-span-2">
             <h3 className="text-xs font-bold tracking-wide text-ink-soft uppercase">
               Lectura gerencial
             </h3>

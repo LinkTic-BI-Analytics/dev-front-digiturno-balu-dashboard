@@ -1,6 +1,7 @@
 "use client";
 
 import { Card } from "@/components/ui/Card";
+import { SectionTitle } from "@/components/ui/SectionTitle";
 import { formatDepartamento } from "@/lib/config/sucursales";
 import { formatEntero } from "@/lib/format";
 import { useDashboard } from "@/providers/DashboardDataProvider";
@@ -25,13 +26,11 @@ export function TicketsSection() {
   return (
     <section aria-labelledby="tickets-titulo">
       <header className="mb-4">
-        <h2
+        <SectionTitle
           id="tickets-titulo"
-          className="text-lg font-bold tracking-tight text-ink"
-        >
-          Detalle de tickets
-        </h2>
-        <p className="mt-0.5 text-sm text-ink-mute">{partes.join(" · ")}</p>
+          titulo="Detalle de tickets"
+          subtitulo={partes.join(" · ")}
+        />
       </header>
 
       <div

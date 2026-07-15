@@ -32,11 +32,11 @@ function tendenciaTickets(tickets: Ticket[], dias: string[]): TrendMetric {
     deltaPct: computeDeltaPct(serie),
     subIndicadores: [
       {
-        etiqueta: "Días del periodo",
+        etiqueta: "Días hábiles",
         valor: `${formatEntero(dias.length)} días`,
       },
       {
-        etiqueta: "Promedio por día",
+        etiqueta: "Promedio por día hábil",
         valor: dias.length
           ? `${formatDecimal(tickets.length / dias.length)} tickets`
           : "—",
@@ -69,7 +69,7 @@ function tendenciaApoyoOperativo(
           : "—",
       },
       {
-        etiqueta: "Promedio por día",
+        etiqueta: "Promedio por día hábil",
         valor: dias.length
           ? `${formatDecimal(apoyo.length / dias.length)} tickets`
           : "—",

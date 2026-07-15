@@ -64,7 +64,7 @@ export function TrendCard({
     >
       <header className="flex items-start justify-between gap-2">
         <div className="flex min-w-0 items-center gap-2.5">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-soft text-brand">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-brand-soft to-brand-soft-2 text-brand">
             <Icon className="h-4.5 w-4.5" />
           </span>
           <h3 className="line-clamp-2 text-xs leading-tight font-bold tracking-wide text-ink-soft uppercase">

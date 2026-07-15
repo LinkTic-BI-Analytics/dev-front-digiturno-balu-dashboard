@@ -1,5 +1,6 @@
 import type { BusinessRules } from "@/lib/config/business-rules";
-import { addDays, countDaysInclusive, enumerateDays } from "@/lib/dates";
+import { addDays, countDaysInclusive } from "@/lib/dates";
+import { enumerateDiasHabiles } from "@/lib/festivos";
 import type { Ticket } from "@/types/atenciones";
 import type { MetricsResult } from "@/types/metrics";
 import { computeMetricas } from "./metricas";
@@ -22,7 +23,11 @@ export function computeMetricsResult(
   };
 }
 
-/** Días del periodo: el rango filtrado, o min→max de los datos en modo "todo". */
+/**
+ * Días HÁBILES del periodo: el rango filtrado, o min→max de los datos en modo
+ * "todo". Sábados, domingos y festivos se excluyen del eje (la operación no
+ * los gestiona); los tickets que caigan ahí siguen contando en los totales.
+ */
 function resolveDias(
   tickets: Ticket[],
   rango: { desde: string | null; hasta: string | null },
@@ -43,5 +48,5 @@ function resolveDias(
     desde = addDays(hasta, -(MAX_DIAS_SERIE - 1));
   }
 
-  return enumerateDays(desde, hasta);
+  return enumerateDiasHabiles(desde, hasta);
 }
