@@ -25,15 +25,19 @@ Desarrollado por el equipo de **BI Analytics de LinkTic**.
   atención con indicador de cumplimiento ANS. **Orden por cualquier columna** y paginación
   de 10 ("1–10 de 4.532").
 - 🗺️ **Mapa de Control gerencial**: choropleth por ANS (verde = ágil → rojo = lento),
-  departamentos sin sedes en gris, leyenda con escala real, sedes como puntos (tamaño ∝
-  tickets) con popups de dirección y métricas, popups de departamento con acumulados, y
-  **doble clic → drill-down 3D** (cámara inclinada + extrusión) que filtra TODO el tablero;
-  botón "← Volver a nacional".
+  departamentos sin sedes en gris, leyenda con escala real (Ágil/Medio/Lento, compactable),
+  sedes como puntos (tamaño ∝ tickets) con popups de dirección y métricas, y **doble clic →
+  drill-down 3D**: cámara inclinada + extrusión con **solo las sedes del departamento
+  posadas en el techo del relieve** (etiquetadas), card fija con las cifras del departamento
+  y filtro de TODO el tablero; botón "← Volver a nacional". En móvil la leyenda y la card
+  bajan del mapa para no tapar la visual.
 - 📅 **Filtros**: barra full-width con grupos etiquetados — rango personalizado, segmented
   control de presets (Última semana / Mes actual / Mes anterior / Todo), **combobox de
-  asesores con búsqueda** (subcadena, ignora tildes; con un departamento enfocado la lista
-  se acota a sus asesores), fila de resumen del periodo y chips de filtros activos con
-  "Limpiar todo". Todo el dashboard reacciona a los tres filtros combinados.
+  sucursales** (las 35 sedes con su departamento; seleccionar una enfoca su departamento en
+  el mapa y acopla todo el tablero) y **combobox de asesores con búsqueda** (subcadena,
+  ignora tildes; acotado a la sucursal o departamento enfocado), fila de resumen con días
+  hábiles y chips de filtros activos con "Limpiar todo". Todo el dashboard reacciona a los
+  filtros combinados. Diseño 100 % responsive (en móvil los controles se apilan).
 - 📈 **Proyecciones a 14 días hábiles**: estacionalidad de lunes a viernes + regresión
   sobre serie desestacionalizada + incertidumbre de residuales → escenarios
   **Mínimo / Base / Máximo esperado** con banda de rango probable, demanda por día de la
@@ -41,12 +45,13 @@ Desarrollado por el equipo de **BI Analytics de LinkTic**.
   (demanda diaria, ANS, tickets por asesor al día, día pico) + narrativa. Degrada con
   historia insuficiente.
 - 📆 **Días hábiles de Colombia**: los sábados, domingos y festivos (calculados: Ley
-  Emiliani + Semana Santa, sin dependencias) se excluyen de todas las series, promedios
-  y proyecciones — la operación no gestiona esos días. Los totales del periodo no cambian.
+  Emiliani + Semana Santa + Ley 2578 de 2026 desde su vigencia, sin dependencias) se
+  excluyen de todas las series, promedios y proyecciones — la operación no gestiona esos
+  días. Los totales del periodo no cambian.
 - 📉 **Métricas**: cerrados, desistidos (`cancelado`), **no asistidos** (`no_asistio`),
   abiertos y horas totales en atención.
-- 🌗 Tema claro/oscuro (el mapa alterna de estilo conservando choropleth y selección),
-  100 % responsivo, favicon con el emblema de Positiva.
+- 🌗 Tema claro/oscuro con **oscuro por defecto** (el mapa alterna de estilo conservando
+  choropleth, selección y sedes 3D), 100 % responsivo, favicon con el emblema de Positiva.
 
 ## Inicio rápido
 

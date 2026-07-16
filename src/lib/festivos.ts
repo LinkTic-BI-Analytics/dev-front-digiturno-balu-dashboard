@@ -2,7 +2,8 @@ import { addDays, weekdayOf } from "@/lib/dates";
 
 /**
  * Calendario laboral colombiano, calculado (sin dependencias): los 18 festivos
- * anuales según la Ley 51 de 1983 (Ley Emiliani) + los móviles de Semana Santa.
+ * anuales según la Ley 51 de 1983 (Ley Emiliani) + los móviles de Semana Santa
+ * (19 desde 2026: la Ley 2578 de 2026 añadió el 9 de julio, trasladable).
  *
  * POLÍTICA DEL TABLERO: la operación no gestiona tickets los sábados, domingos
  * ni festivos (verificado en datos: ~0,05 % del volumen cae ahí). Esos días se
@@ -21,6 +22,15 @@ const EMILIANI_MES_DIA: [mes: number, dia: number][] = [
   [11, 1], // Todos los Santos
   [11, 11], // Independencia de Cartagena
 ];
+
+/**
+ * Ley 2578 de 2026: Día de Nuestra Señora del Rosario de Chiquinquirá
+ * (9 de julio), trasladable a lunes (régimen Emiliani). Vigente DESDE 2026
+ * (en 2026 cayó jueves → se celebró el lunes 13 de julio; verificado en
+ * datos: 0 tickets ese día).
+ */
+const EMILIANI_DESDE_2026_MES_DIA: [mes: number, dia: number][] = [[7, 9]];
+const ANO_VIGENCIA_LEY_2578 = 2026;
 
 /** Festivos fijos (no se trasladan). */
 const FIJOS_MES_DIA: [mes: number, dia: number][] = [
@@ -71,6 +81,11 @@ export function festivosDelAno(year: number): ReadonlySet<string> {
   for (const [mes, dia] of FIJOS_MES_DIA) set.add(iso(year, mes, dia));
   for (const [mes, dia] of EMILIANI_MES_DIA) {
     set.add(trasladarALunes(iso(year, mes, dia)));
+  }
+  if (year >= ANO_VIGENCIA_LEY_2578) {
+    for (const [mes, dia] of EMILIANI_DESDE_2026_MES_DIA) {
+      set.add(trasladarALunes(iso(year, mes, dia)));
+    }
   }
 
   const pascua = easterSunday(year);

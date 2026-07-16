@@ -26,12 +26,12 @@
   --brand-soft-2: #ffe8c8;
   --brand-contrast: #ffffff;
 
-  --success: #0d8c3c;
+  --success: #0e9a41;
   --success-strong: #096029;
-  --success-soft: #d4eadc;
-  --danger: #bd1c1c;
+  --success-soft: #cdecd9;
+  --danger: #d02222;
   --danger-strong: #8e1515;
-  --danger-soft: #f5dcdc;
+  --danger-soft: #f9d6d6;
   --warning: #9d590c;
   --warning-soft: #f1e7dc;
   --info: #2c70d5;
@@ -66,12 +66,12 @@
   --brand-soft-2: #33250f;
   --brand-contrast: #100f0d;
 
-  --success: #3db368;
-  --success-strong: #84c59c;
-  --success-soft: #0d2a18;
-  --danger: #e07b7b;
-  --danger-strong: #edc1c1;
-  --danger-soft: #2e1414;
+  --success: #4ade80;
+  --success-strong: #86efac;
+  --success-soft: #123a20;
+  --danger: #f87171;
+  --danger-strong: #fca5a5;
+  --danger-soft: #3b1616;
   --warning: #c7a074;
   --warning-soft: #2b2012;
   --info: #6798e1;

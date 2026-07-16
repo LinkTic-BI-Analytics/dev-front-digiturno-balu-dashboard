@@ -22,6 +22,14 @@ export function filterByAsesor(
   return tickets.filter((t) => t.asesorId === asesorId);
 }
 
+export function filterBySucursal(
+  tickets: Ticket[],
+  sucursalId: string | null,
+): Ticket[] {
+  if (!sucursalId) return tickets;
+  return tickets.filter((t) => t.sucursalId === sucursalId);
+}
+
 export function filterByDepartamento(
   tickets: Ticket[],
   departamento: string | null,

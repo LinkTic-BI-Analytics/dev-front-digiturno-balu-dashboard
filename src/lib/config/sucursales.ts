@@ -27,9 +27,7 @@ export const SUCURSALES: readonly Sucursal[] = [
   { id: "245b63cc-45f1-499b-ba33-f1ce422f3fb1", nombre: "SUPER CAD 30", departamento: "BOGOTA", direccion: "Carrera 30 # 25 - 90, Centro Administrativo Distrital CAD", lat: 4.6281, lng: -74.0822 },
   { id: "59822478-b809-477f-b55c-8f52849a0397", nombre: "CÚCUTA", departamento: "NORTE DE SANTANDER", direccion: "Avenida 1 # 18 - 69, Barrio Blanco", lat: 7.8855, lng: -72.5043 },
   { id: "ba858de2-5ae5-4f60-ac40-351dc5e2e7ec", nombre: "POPAYÁN", departamento: "CAUCA", direccion: "Calle 3 # 8 - 57", lat: 2.4422, lng: -76.6068 },
-  // ⚠ La dirección original de BUENAVENTURA replica la de CAD Bosa (posible error de la fuente);
-  // las coordenadas sí corresponden a Buenaventura y son las que pintan el punto en el mapa.
-  { id: "12822c75-209f-4e78-be67-7dbe957bd216", nombre: "BUENAVENTURA", departamento: "VALLE DEL CAUCA", direccion: "Calle 57R Sur # 72D - 12, Junto al Portal de Transmilenio del Sur", lat: 3.8801, lng: -77.0644 },
+  { id: "12822c75-209f-4e78-be67-7dbe957bd216", nombre: "BUENAVENTURA", departamento: "VALLE DEL CAUCA", direccion: "Calle 2A # 3 - 19, Centro Empresarial Pacífico", lat: 3.88988, lng: -77.07948 },
   { id: "d12f6427-ad5f-455c-8071-626407555d6d", nombre: "CAD BOSA", departamento: "BOGOTA", direccion: "Avenida Calle 57R Sur # 72D - 12", lat: 4.6065, lng: -74.1663 },
   { id: "76c16351-f95c-483c-b780-8e81ec7df513", nombre: "BUCARAMANGA", departamento: "SANTANDER", direccion: "Transversal 93 # 34 - 99, Barrio El Tejar, Cacique Centro Comercial, Semisótano, Local SS10 G-H", lat: 7.0948, lng: -73.1113 },
   { id: "c42b9339-478f-4c20-b5ec-658e10a22599", nombre: "APARTADÓ", departamento: "ANTIOQUIA", direccion: "Calle 104 # 101 - 15, Barrio Vélez, Piso 1, Cámara de Comercio", lat: 7.8829, lng: -76.6341 },

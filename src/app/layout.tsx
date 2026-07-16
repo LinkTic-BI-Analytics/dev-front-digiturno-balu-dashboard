@@ -21,8 +21,8 @@ export const metadata: Metadata = {
     "Panorama operativo nacional de tickets y asesores de Digiturno Balú. Desarrollado por el equipo de BI Analytics de LinkTic.",
 };
 
-/** Aplica el tema guardado antes del primer paint para evitar FOUC. */
-const themeInitScript = `try{if(localStorage.getItem("balu-theme")==="dark")document.documentElement.classList.add("dark")}catch(e){}`;
+/** Aplica el tema antes del primer paint (default: OSCURO, salvo opt-out explícito). */
+const themeInitScript = `var t=null;try{t=localStorage.getItem("balu-theme")}catch(e){}if(t!=="light")document.documentElement.classList.add("dark")`;
 
 export default function RootLayout({
   children,

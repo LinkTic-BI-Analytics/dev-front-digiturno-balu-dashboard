@@ -14,4 +14,6 @@ export interface FilterState {
   asesorId: string | null;
   /** Filtro geográfico (clave canónica de departamento, ej. "ANTIOQUIA"). */
   departamento: string | null;
+  /** Filtro por sede (sucursal_id): implica enfocar su departamento en el mapa. */
+  sucursalId: string | null;
 }

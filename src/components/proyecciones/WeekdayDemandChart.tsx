@@ -85,7 +85,7 @@ export function WeekdayDemandChart({ data }: WeekdayDemandChartProps) {
   }, [data, theme]);
 
   return (
-    <div className="h-52 w-full">
+    <div className="h-full min-h-52 w-full">
       <Bar
         data={chartData}
         options={options}
