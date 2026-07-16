@@ -32,6 +32,10 @@ const LAYER_FILL = "departamentos-fill";
 const LAYER_LINE = "departamentos-line";
 const LAYER_EXTRUSION = "departamentos-extrusion";
 const LAYER_SEDES = "sedes-circles";
+/** Sedes del drill-down: símbolos elevados al techo de la extrusión 3D. */
+const LAYER_SEDES_3D = "sedes-3d";
+const SEDE_IMAGE_PREFIX = "sede-dot-";
+const SEDE_IMAGE_SIN_DATOS = "sede-dot-sin-datos";
 
 /** Escala del mapa de calor: verde = ANS más bajo (ágil) → rojo = más alto (lento). */
 export const ANS_HEAT_STOPS: [number, string][] = [
@@ -145,12 +149,24 @@ export function ControlMap({
       const feature = event.features?.[0];
       if (!feature || feature.id === undefined) return;
 
-      // Si el puntero está sobre una sede, su popup tiene prioridad.
-      if (map.getLayer(LAYER_SEDES)) {
+      // Si el puntero está sobre una sede (2D o 3D), su popup tiene prioridad.
+      const capasSedes = [LAYER_SEDES, LAYER_SEDES_3D].filter((id) =>
+        map.getLayer(id),
+      );
+      if (capasSedes.length > 0) {
         const sedes = map.queryRenderedFeatures(event.point, {
-          layers: [LAYER_SEDES],
+          layers: capasSedes,
         });
         if (sedes.length > 0) return;
+      }
+
+      // En drill-down el popup de departamento genera ruido: la info vive en
+      // la card fija del mapa. El dblclick para cambiar de foco sigue activo.
+      if (runtime.selected) {
+        clearHover();
+        map.getCanvas().style.cursor = "";
+        popup.remove();
+        return;
       }
 
       if (feature.id !== hoveredId) {
@@ -178,7 +194,7 @@ export function ControlMap({
       popup.remove();
     });
 
-    map.on("mousemove", LAYER_SEDES, (event) => {
+    const onSedeHover = (event: mapboxgl.MapLayerMouseEvent) => {
       const feature = event.features?.[0];
       if (!feature) return;
       map.getCanvas().style.cursor = "pointer";
@@ -186,6 +202,14 @@ export function ControlMap({
         .setLngLat(event.lngLat)
         .setHTML(sedePopupHtml(feature.properties as SedeProperties))
         .addTo(map);
+    };
+    map.on("mousemove", LAYER_SEDES, onSedeHover);
+    map.on("mousemove", LAYER_SEDES_3D, onSedeHover);
+
+    // Red de seguridad: si el estilo pide un sprite de sede aún no registrado
+    // (p. ej. tras un setStyle), se regeneran todos.
+    map.on("styleimagemissing", (event) => {
+      if (event.id.startsWith(SEDE_IMAGE_PREFIX)) ensureSedeImages(map);
     });
 
     map.on("dblclick", LAYER_FILL, (event) => {
@@ -284,6 +308,47 @@ const heatColorExpression = () =>
     heatInterpolation(["coalesce", ["feature-state", "ansNorm"], 0]),
   ] as unknown as mapboxgl.ExpressionSpecification;
 
+/**
+ * Sprites circulares pre-tintados para la capa symbol del drill-down (evita
+ * SDF): 6 stops del mapa de calor + gris "sin datos", con borde del color de
+ * la superficie del tema. `map.addImage` NO sobrevive a `setStyle`, por eso
+ * se (re)generan en cada `setupLayers`.
+ */
+function ensureSedeImages(map: mapboxgl.Map): void {
+  const surface =
+    getComputedStyle(document.documentElement)
+      .getPropertyValue("--surface")
+      .trim() || "#ffffff";
+
+  const colores = [
+    ...ANS_HEAT_STOPS.map(([, color]) => color),
+    COLOR_SIN_SEDES,
+  ];
+  const SIZE = 64; // 64 px @ pixelRatio 2 → 32 px CSS con icon-size 1
+
+  colores.forEach((color, index) => {
+    const id =
+      index < ANS_HEAT_STOPS.length
+        ? `${SEDE_IMAGE_PREFIX}${index}`
+        : SEDE_IMAGE_SIN_DATOS;
+    if (map.hasImage(id)) map.removeImage(id);
+
+    const canvas = document.createElement("canvas");
+    canvas.width = SIZE;
+    canvas.height = SIZE;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.beginPath();
+    ctx.arc(SIZE / 2, SIZE / 2, SIZE / 2 - 5, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.lineWidth = 6;
+    ctx.strokeStyle = surface;
+    ctx.stroke();
+    map.addImage(id, ctx.getImageData(0, 0, SIZE, SIZE), { pixelRatio: 2 });
+  });
+}
+
 async function setupLayers(map: mapboxgl.Map, runtime: MapRuntime): Promise<void> {
   try {
     runtime.geo = await loadDepartamentosGeo();
@@ -292,6 +357,8 @@ async function setupLayers(map: mapboxgl.Map, runtime: MapRuntime): Promise<void
     return;
   }
   if (!map.getStyle() || map.getSource(SOURCE_DEPTOS)) return;
+
+  ensureSedeImages(map);
 
   map.addSource(SOURCE_DEPTOS, {
     type: "geojson",
@@ -378,6 +445,64 @@ async function setupLayers(map: mapboxgl.Map, runtime: MapRuntime): Promise<void
     },
   });
 
+  const ink =
+    getComputedStyle(document.documentElement)
+      .getPropertyValue("--ink")
+      .trim() || "#1c1917";
+
+  // Sedes del drill-down: símbolos elevados al TECHO de la extrusión 3D
+  // (symbol-z-elevate), con etiqueta del nombre. Oculta hasta que haya foco.
+  map.addLayer({
+    id: LAYER_SEDES_3D,
+    type: "symbol",
+    source: SOURCE_SEDES,
+    filter: ["==", ["get", "departamento"], "__ninguno__"],
+    layout: {
+      "symbol-z-elevate": true,
+      "icon-image": [
+        "match",
+        ["get", "ansBucket"],
+        0,
+        `${SEDE_IMAGE_PREFIX}0`,
+        1,
+        `${SEDE_IMAGE_PREFIX}1`,
+        2,
+        `${SEDE_IMAGE_PREFIX}2`,
+        3,
+        `${SEDE_IMAGE_PREFIX}3`,
+        4,
+        `${SEDE_IMAGE_PREFIX}4`,
+        5,
+        `${SEDE_IMAGE_PREFIX}5`,
+        SEDE_IMAGE_SIN_DATOS,
+      ] as unknown as mapboxgl.ExpressionSpecification,
+      "icon-size": [
+        "interpolate",
+        ["linear"],
+        ["sqrt", ["get", "tickets"]],
+        0,
+        0.3,
+        10,
+        0.45,
+        40,
+        0.7,
+        130,
+        1.1,
+      ] as unknown as mapboxgl.ExpressionSpecification,
+      "icon-allow-overlap": true,
+      "text-field": ["get", "nombre"] as unknown as mapboxgl.ExpressionSpecification,
+      "text-size": 11,
+      "text-anchor": "top",
+      "text-offset": [0, 1.1],
+      "text-optional": true,
+    },
+    paint: {
+      "text-color": ink,
+      "text-halo-color": surface,
+      "text-halo-width": 1.2,
+    },
+  });
+
   runtime.ready = true;
   applyGeoStats(map, runtime.geo, runtime.geoStats);
   applySelectionPaint(map, runtime.geo, runtime.selected);
@@ -425,6 +550,19 @@ function applySelectionPaint(
       { dimmed: selectedId !== -1 && info.id !== selectedId },
     );
   }
+
+  // Drill-down: solo las sedes del departamento enfocado, elevadas al techo
+  // de la extrusión (las circles nacionales se ocultan — las sedes ajenas
+  // generan ruido). Vista nacional: circles de vuelta y símbolos ocultos.
+  if (selected !== null) {
+    map.setLayoutProperty(LAYER_SEDES, "visibility", "none");
+    map.setFilter(LAYER_SEDES_3D, ["==", ["get", "departamento"], selected]);
+    map.setLayoutProperty(LAYER_SEDES_3D, "visibility", "visible");
+  } else {
+    map.setLayoutProperty(LAYER_SEDES, "visibility", "visible");
+    map.setFilter(LAYER_SEDES_3D, ["==", ["get", "departamento"], "__ninguno__"]);
+    map.setLayoutProperty(LAYER_SEDES_3D, "visibility", "none");
+  }
 }
 
 function applySelectionCamera(
@@ -458,6 +596,22 @@ interface SedeProperties {
   departamento: string;
   tickets: number;
   ans: number;
+  /** Normalizado 0..1 para el color de las circles (−1 = sin datos). */
+  ansNorm: number;
+  /** Stop de ANS_HEAT_STOPS más cercano (0..5; −1 = sin datos) para los sprites 3D. */
+  ansBucket: number;
+}
+
+/** Umbrales (puntos medios entre stops) para asignar el sprite pre-tintado. */
+const BUCKET_UMBRALES = [0.125, 0.375, 0.6, 0.775, 0.925];
+
+function ansBucketDe(ansNorm: number): number {
+  if (ansNorm < 0) return -1;
+  let bucket = 0;
+  for (const umbral of BUCKET_UMBRALES) {
+    if (ansNorm >= umbral) bucket += 1;
+  }
+  return bucket;
 }
 
 function buildSedesCollection(stats: GeoStats): FeatureCollection {
@@ -485,7 +639,8 @@ function buildSedesCollection(stats: GeoStats): FeatureCollection {
           tickets: sedeStats?.tickets ?? 0,
           ans: ans ?? -1,
           ansNorm,
-        } satisfies SedeProperties & { ansNorm: number },
+          ansBucket: ansBucketDe(ansNorm),
+        } satisfies SedeProperties,
       };
     }),
   };

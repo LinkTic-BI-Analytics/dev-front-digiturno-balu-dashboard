@@ -1,6 +1,6 @@
 # CLAUDE.md — Digiturno Balú · Tablero de Operación (gerencial)
 
-Contexto para agentes que desarrollen sobre este proyecto. Última actualización: 2026-07-15.
+Contexto para agentes que desarrollen sobre este proyecto. Última actualización: 2026-07-16.
 
 ## Qué es este proyecto
 
@@ -54,11 +54,18 @@ dataset-store (módulo + useSyncExternalStore)
      manual en la ruta; 136k tickets) — cookie auth, 401 → login
    │
    ▼ (cliente) pipeline 100 % memoizado en DashboardDataProvider:
-tickets → filterByPeriodo → filterByAsesor → ┬ geoStats (SIN filtro depto → mapa nacional)
+tickets → filterByPeriodo → filterByAsesor → filterBySucursal
+                                             ┬ geoStats (SIN filtro depto → mapa nacional)
                                              └ filterByDepartamento → computeMetricsResult
                                                                     → computeForecast
                                                                     → TicketsTable (drill-down)
 ```
+
+**Filtro de sucursal (2026-07-16)**: `selectSucursal(id)` fija `sucursalId` + el
+`departamento` de la sede (drill-down automático del mapa) y limpia el asesor huérfano;
+`selectSucursal(null)` vuelve a vista nacional; `selectDepartamento` conserva la sucursal
+solo si pertenece al nuevo departamento. Con sucursal activa el resto del país queda "sin
+datos" en el mapa — coherente con el filtro de asesor.
 
 **El dedupe por ticket vive en SQL** (`DISTINCT ON`) — la vista une atenciones (N filas por
 ticket). El `ORDER BY ticket_id, subtramite_inicio ASC NULLS LAST` hace determinista la fila
@@ -85,11 +92,14 @@ o asesor seleccionado (orden por columna + paginación de 10, client-side sobre 
   desistidos=`cancelado`, noAsistidos=`no_asistio`, abiertos=`pendiente/llamando/atendiendo`;
   `apoyoOperativoSucursalId=MESA_AYUDA_ID`; **ANS = tiempo_ejecucion, objetivo 15 min**
 - `src/lib/festivos.ts` — ★ calendario laboral colombiano CALCULADO (computus de Pascua +
-  Ley Emiliani + fijos; 18 festivos/año, cache por año, verificado 2025/2026). **Todos los
-  ejes de días del tablero son DÍAS HÁBILES** (`esDiaHabil`, `enumerateDiasHabiles`,
-  `addDiasHabiles`, `lastNDiasHabiles`, `countDiasHabiles`): la operación no gestiona
-  Sáb/Dom/festivos (verificado en datos: 0,05 %). Los tickets de días no hábiles SIGUEN
-  contando en totales/buckets/horas/tabla; solo salen de series, promedios y forecast.
+  Ley Emiliani + fijos; **18 festivos/año, 19 desde 2026**: la Ley 2578 de 2026 añadió el
+  9 de julio trasladable a lunes — en 2026 fue el lunes 13 jul, verificado 0 tickets en BD.
+  Cache por año; en 2025 hay 17 FECHAS distintas porque San Pedro y Sagrado Corazón
+  colisionaron en jun 30 — correcto, el set deduplica). **Todos los ejes de días del
+  tablero son DÍAS HÁBILES** (`esDiaHabil`, `enumerateDiasHabiles`, `addDiasHabiles`,
+  `lastNDiasHabiles`, `countDiasHabiles`): la operación no gestiona Sáb/Dom/festivos
+  (verificado en datos: 0,05 %). Los tickets de días no hábiles SIGUEN contando en
+  totales/buckets/horas/tabla; solo salen de series, promedios y forecast.
 - `src/lib/data/` — `dataset-codec.ts` (pack/decode columnar, `DATASET_SCHEMA_VERSION`
   invalida cachés IDB), `fetch-dataset.ts` (SQL + ping), `dataset-store.ts` (ciclo 3 min),
   `idb.ts` (IndexedDB tolerante a fallos), `demo-data.ts`
@@ -103,13 +113,25 @@ o asesor seleccionado (orden por columna + paginación de 10, client-side sobre 
 - `src/lib/map/departamentos-geo.ts` — geojson con `feature.id` explícito por índice
   (feature-state determinista) + bbox por depto
 - `src/components/map/ControlMap.tsx` — choropleth por feature-state (`ansNorm` 0..1,
-  verde→rojo; gris sin sedes), capa de sedes (circles ∝ √tickets), popups ricos, dblclick →
-  drill-down 3D (fitBounds pitch 55 + fill-extrusion + dimmed). **Todo el estado del mapa se
-  re-aplica en `style.load`** (cambio de tema) desde un objeto runtime mutable fuera de React
+  verde→rojo; gris sin sedes), capa de sedes (circles ∝ √tickets, SOLO vista nacional),
+  dblclick → drill-down 3D (fitBounds pitch 55 + fill-extrusion + dimmed). **En drill-down**:
+  las circles se ocultan y una capa symbol `sedes-3d` con **`symbol-z-elevate: true`** posa
+  SOLO las sedes del departamento (sprites canvas pre-tintados por bucket de ANS + etiqueta
+  con el nombre) **en el TECHO de la extrusión**; el popup hover de departamento se
+  DESACTIVA (la info vive en `DepartamentoInfoCard`). **Todo el estado del mapa se re-aplica
+  en `style.load`** (cambio de tema) desde un objeto runtime mutable fuera de React —
+  incluidas las imágenes (`ensureSedeImages`: `addImage` NO sobrevive a `setStyle`; red de
+  seguridad con `styleimagemissing`).
+- `src/components/map/DepartamentoInfoCard.tsx` — card fija del drill-down (abajo-derecha
+  en ≥sm, en flujo bajo el mapa en móvil) con las cifras del departamento; `MapLegend`
+  rediseñada (Ágil/Medio/Lento + swatches, compactable) abajo-izquierda con el mismo patrón
+  responsive (overlays en `MapSection` con `sm:absolute`, flujo normal en `<sm`).
 - `src/components/filters/` — `FiltersBar` (card full-width: grupos etiquetados
-  Periodo/Asesor, segmented control de presets, fila de resumen con días + chip de depto +
-  "Limpiar todo") y `AsesorCombobox` (búsqueda por subcadena normalizando tildes; opciones
-  **acotadas al departamento enfocado** — el provider limpia el asesor huérfano al enfocar)
+  Periodo/Sucursal/Asesor, segmented control de presets — 2×2 en móvil —, fila de resumen
+  con días hábiles + chip de depto + "Limpiar todo") y `FilterCombobox` GENÉRICO (búsqueda
+  por subcadena normalizando tildes, opción con `detalle` secundario; instanciado para las
+  35 sucursales —con su departamento— y para asesores **acotados a la sucursal o al
+  departamento enfocado** — el provider limpia filtros huérfanos al enfocar)
 - `src/components/tickets/` — `TicketsSection` (subtítulo contextual + estado vacío),
   `TicketsTable` (8 columnas: Turno/Fecha·hora/Sucursal/Asesor/Trámite/Estado/Espera/
   Atención con punto ANS; sort por columna con nulls al final; reset de página con el patrón
@@ -152,8 +174,11 @@ o asesor seleccionado (orden por columna + paginación de 10, client-side sobre 
 - **Proyecciones**: escenarios renombrados a Mínimo/Base/Máximo (2026-07-15; internamente
   mínimo = base−σ, máximo = base+σ — la σ no se muestra en la UI).
 - El término "asesores activos" no se usa en la UI.
-- El CSV de sedes será eliminado: `sucursales.ts` es la fuente. Direcciones sospechosas
-  anotadas en el archivo (BUENAVENTURA duplica la de CAD Bosa; SINCELEJO ambigua).
+- El CSV de sedes será eliminado: `sucursales.ts` es la fuente. BUENAVENTURA corregida con
+  dato oficial (2026-07-16: Calle 2A # 3 - 19, lat 3.88988, lng −77.07948); SINCELEJO sigue
+  con dirección ambigua interpretada.
+- **Tema OSCURO por defecto** (2026-07-16): el script anti-FOUC aplica `.dark` salvo
+  `localStorage["balu-theme"]==="light"`; `getServerSnapshot()` devuelve `"dark"`.
 - **Departamentos SIEMPRE en MAYÚSCULAS** en la UI (con tildes).
 - **Toda cifra lleva unidad o leyenda**: cards de tendencias con `leyenda` bajo el valor
   (la de Asesores dice "Tickets promedio por asesor" — el valor NO es un conteo), sub-
@@ -215,3 +240,10 @@ o asesor seleccionado (orden por columna + paginación de 10, client-side sobre 
 - El trío verde/naranja/rojo como SERIES de un chart falla la validación dataviz (CVD en
   claro, piso normal-vision en oscuro; no existe combinación legal rojo/naranja en dark) →
   límites del forecast en `--ink-mute` neutro.
+- `map.addImage` NO sobrevive a `setStyle`: regenerar sprites en cada `setupLayers`
+  (style.load) con `hasImage→removeImage→addImage` + listener `styleimagemissing`.
+- `queryRenderedFeatures` con un layer id inexistente LANZA error → filtrar los ids con
+  `map.getLayer(id)` antes de consultar.
+- Los festivos por año se comparan como FECHAS distintas: en años con colisión de traslados
+  (2025: San Pedro + Sagrado Corazón ambos en jun 30) el set tiene menos entradas que
+  festivos "de calendario" — no es un bug.

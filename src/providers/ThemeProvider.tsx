@@ -30,7 +30,8 @@ function getSnapshot(): Theme {
 }
 
 function getServerSnapshot(): Theme {
-  return "light";
+  // El default del tablero es OSCURO (el script anti-FOUC aplica .dark salvo opt-out).
+  return "dark";
 }
 
 interface ThemeContextValue {
@@ -39,7 +40,7 @@ interface ThemeContextValue {
 }
 
 const ThemeContext = createContext<ThemeContextValue>({
-  theme: "light",
+  theme: "dark",
   toggleTheme: () => {},
 });
 

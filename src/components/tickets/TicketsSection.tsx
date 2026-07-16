@@ -2,7 +2,7 @@
 
 import { Card } from "@/components/ui/Card";
 import { SectionTitle } from "@/components/ui/SectionTitle";
-import { formatDepartamento } from "@/lib/config/sucursales";
+import { SUCURSAL_BY_ID, formatDepartamento } from "@/lib/config/sucursales";
 import { formatEntero } from "@/lib/format";
 import { useDashboard } from "@/providers/DashboardDataProvider";
 import { TicketsTable } from "./TicketsTable";
@@ -17,6 +17,10 @@ export function TicketsSection() {
 
   const partes: string[] = [];
   if (filter.departamento) partes.push(formatDepartamento(filter.departamento));
+  if (filter.sucursalId) {
+    const sede = SUCURSAL_BY_ID.get(filter.sucursalId);
+    if (sede) partes.push(sede.nombre);
+  }
   if (filter.asesorId) {
     const asesor = asesores.find((a) => a.id === filter.asesorId);
     if (asesor) partes.push(asesor.nombre);

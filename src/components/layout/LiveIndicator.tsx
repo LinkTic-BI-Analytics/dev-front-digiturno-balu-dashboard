@@ -52,25 +52,43 @@ function resolveConfig(snapshot: {
   return { etiqueta: "Conectando…", dotClass: "bg-ink-mute", ping: true };
 }
 
-export function LiveIndicator() {
+export function LiveIndicator({ compact = false }: { compact?: boolean }) {
   const snapshot = useDatasetStore();
   const { etiqueta, dotClass, ping } = resolveConfig(snapshot);
+
+  const dot = (
+    <span className="relative flex h-2.5 w-2.5">
+      {ping && (
+        <span
+          className={`absolute inline-flex h-full w-full rounded-full ${dotClass} animate-live-ping`}
+        />
+      )}
+      <span
+        className={`relative inline-flex h-2.5 w-2.5 rounded-full ${dotClass}`}
+      />
+    </span>
+  );
+
+  if (compact) {
+    // Variante móvil: solo el punto de estado (la etiqueta va en aria/title).
+    return (
+      <span
+        role="status"
+        aria-label={etiqueta}
+        title={etiqueta}
+        className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-stroke bg-surface-2"
+      >
+        {dot}
+      </span>
+    );
+  }
 
   return (
     <div
       role="status"
       className="inline-flex items-center gap-2.5 rounded-full border border-stroke bg-surface-2 py-1.5 pr-4 pl-3"
     >
-      <span className="relative flex h-2.5 w-2.5">
-        {ping && (
-          <span
-            className={`absolute inline-flex h-full w-full rounded-full ${dotClass} animate-live-ping`}
-          />
-        )}
-        <span
-          className={`relative inline-flex h-2.5 w-2.5 rounded-full ${dotClass}`}
-        />
-      </span>
+      {dot}
       <span className="text-xs font-semibold whitespace-nowrap text-ink-soft">
         {etiqueta}
       </span>

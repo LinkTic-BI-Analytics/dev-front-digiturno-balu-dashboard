@@ -58,11 +58,11 @@ export function ProyeccionesSection() {
 
           <ScenarioCards data={forecast} />
 
-          <Card className="card-lift p-5">
+          <Card className="card-lift flex flex-col p-5">
             <h3 className="text-xs font-bold tracking-wide text-ink-soft uppercase">
               Demanda por día de la semana
             </h3>
-            <div className="mt-4">
+            <div className="mt-4 min-h-0 flex-1">
               <WeekdayDemandChart data={forecast} />
             </div>
           </Card>

@@ -9,15 +9,15 @@ import { ThemeToggle } from "./ThemeToggle";
 export function DashboardHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-stroke bg-surface/85 backdrop-blur-md">
-      <div className="mx-auto flex h-16 w-full max-w-[1800px] items-center gap-3 px-4 sm:gap-4 sm:px-6 lg:px-8">
-        <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+      <div className="mx-auto flex h-14 w-full max-w-[1800px] items-center gap-2 px-3 sm:h-16 sm:gap-4 sm:px-6 lg:px-8">
+        <div className="flex min-w-0 items-center gap-2.5 sm:gap-4">
           <Image
             src="/graphic_identity/positiva_logo.svg"
             alt="Positiva"
             width={132}
             height={32}
             priority
-            className="h-7 w-auto shrink-0 sm:h-8 dark:brightness-0 dark:invert"
+            className="h-6 w-auto shrink-0 sm:h-8 dark:brightness-0 dark:invert"
           />
           <span
             className="hidden h-7 w-px shrink-0 bg-stroke sm:block"
@@ -36,16 +36,15 @@ export function DashboardHeader() {
           <LiveIndicator />
         </div>
 
-        <div className="ml-auto flex items-center gap-2 md:ml-0">
+        <div className="ml-auto flex items-center gap-1.5 sm:gap-2 md:ml-0">
+          {/* En móvil el indicador se compacta a solo el punto de estado */}
+          <span className="md:hidden">
+            <LiveIndicator compact />
+          </span>
           <ThemeToggle />
           <FullscreenToggle />
           <LogoutButton />
         </div>
-      </div>
-
-      {/* En móvil el indicador baja a su propia fila */}
-      <div className="flex justify-center pb-2.5 md:hidden">
-        <LiveIndicator />
       </div>
 
       {/* Hairline con tinte de marca sobre el borde inferior */}
